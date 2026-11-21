@@ -1,0 +1,17 @@
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
+package(default_visibility = ["//analytics:__subpackages__"])
+
+objc_library(
+    name = "apple",
+    srcs = ["apple_backend.mm"],
+    copts = [
+        "-fmodules",
+        "-fcxx-modules",
+    ],
+    target_compatible_with = ["@platforms//os:ios"],
+    deps = [
+        "//analytics/native:backend_api",
+        "//ios:analytics",
+    ],
+)

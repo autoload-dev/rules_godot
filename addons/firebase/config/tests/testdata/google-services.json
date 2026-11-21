@@ -1,0 +1,32 @@
+{
+  "project_info": {
+    "project_number": "123456789012",
+    "firebase_url": "https://example-game-default-rtdb.firebaseio.com",
+    "project_id": "example-game",
+    "storage_bucket": "example-game.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:123456789012:android:aaaaaaaaaaaaaaaa",
+        "android_client_info": {"package_name": "org.example.game"}
+      },
+      "oauth_client": [
+        {"client_id": "123456789012-android.apps.googleusercontent.com", "client_type": 1},
+        {"client_id": "123456789012-web.apps.googleusercontent.com", "client_type": 3}
+      ],
+      "api_key": [{"current_key": "AIzaFakeKeyForTests000000000000000000"}],
+      "services": {"appinvite_service": {"other_platform_oauth_client": []}}
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:123456789012:android:bbbbbbbbbbbbbbbb",
+        "android_client_info": {"package_name": "org.example.game.dev"}
+      },
+      "oauth_client": [],
+      "api_key": [{"current_key": "AIzaFakeDevKeyForTests00000000000000"}],
+      "services": {}
+    }
+  ],
+  "configuration_version": "1"
+}

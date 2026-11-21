@@ -1,0 +1,43 @@
+load("@autoload_rules_godot//godot:defs.bzl", "godot_addon")
+load("@autoload_rules_godot//godot/extension:defs.bzl", "godot_cc_extension")
+
+package(default_visibility = ["//visibility:private"])
+
+# Google Analytics for Firebase: the FirebaseAnalytics class. It needs Firebase Core, whose
+# autoload initializes the default app before game code runs.
+godot_addon(
+    name = "analytics",
+    directory = "addons/firebase_analytics",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":firebase_analytics",
+        "//core",
+    ],
+)
+
+# The name is unique across all add-ons and applications: on iOS it names the framework.
+godot_cc_extension(
+    name = "firebase_analytics",
+    srcs = ["//analytics/native:registration"],
+    entry_symbol = "firebase_analytics_init",
+    platform_deps = select({
+        "@platforms//os:android": ["//analytics/native/backends/android:plugin"],
+        # The Firebase framework the iOS backend links, which the application embeds.
+        "@platforms//os:ios": ["//ios:analytics.bundle"],
+        "//conditions:default": [],
+    }),
+    resource_path = "addons/firebase_analytics/firebase_analytics.gdextension",
+    target_compatible_with = select({
+        "@platforms//os:osx": [],
+        "@platforms//os:ios": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:android": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = ["//analytics/native"] + select({
+        "@autoload_rules_godot//godot:tool": ["//analytics/native/backends/unsupported"],
+        "@platforms//os:ios": ["//analytics/native/backends/apple"],
+        "@platforms//os:android": ["//analytics/native/backends/android"],
+        "//conditions:default": ["//analytics/native/backends/unsupported"],
+    }),
+)

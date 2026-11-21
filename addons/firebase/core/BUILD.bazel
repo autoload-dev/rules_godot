@@ -1,0 +1,45 @@
+load("@autoload_rules_godot//godot:defs.bzl", "godot_addon")
+load("@autoload_rules_godot//godot/extension:defs.bzl", "godot_cc_extension")
+
+package(default_visibility = ["//visibility:private"])
+
+# Firebase Core: initializes the default Firebase app when the game starts, from the
+# application's google-services.json (Android) or GoogleService-Info.plist (iOS); see
+# firebase_config in //config. Other Firebase add-ons need it.
+godot_addon(
+    name = "core",
+    srcs = ["firebase.gd"],
+    autoloads = {"Firebase": "*res://addons/firebase_core/firebase.gd"},
+    directory = "addons/firebase_core",
+    visibility = ["//visibility:public"],
+    deps = [":firebase_core"],
+)
+
+# The name is unique across all add-ons and applications: on iOS it names the framework.
+godot_cc_extension(
+    name = "firebase_core",
+    srcs = ["//core/native:registration"],
+    entry_symbol = "firebase_core_init",
+    platform_deps = select({
+        "@platforms//os:android": ["//core/native/backends/android:plugin"],
+        # The Firebase framework the iOS backend links, which the application embeds.
+        "@platforms//os:ios": ["//ios:core.bundle"],
+        "//conditions:default": [],
+    }),
+    resource_path = "addons/firebase_core/firebase_core.gdextension",
+    target_compatible_with = select({
+        "@platforms//os:osx": [],
+        "@platforms//os:ios": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:android": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    # The editor and desktop runs use the unsupported backend: Firebase acts in games on
+    # Android and iOS only, so editor builds never fetch the SDKs.
+    deps = ["//core/native"] + select({
+        "@autoload_rules_godot//godot:tool": ["//core/native/backends/unsupported"],
+        "@platforms//os:ios": ["//core/native/backends/apple"],
+        "@platforms//os:android": ["//core/native/backends/android"],
+        "//conditions:default": ["//core/native/backends/unsupported"],
+    }),
+)

@@ -1,0 +1,3 @@
+# The convenience symlinks of builds in this directory and the example applications, a root
+# module of their own.
+ignore_directories(["bazel-*", "examples"])

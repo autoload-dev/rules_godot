@@ -1,0 +1,5 @@
+// How this repository verifies the module (addons/AGENTS.md, "Lanes"): the lanes that run
+// when it changes, among host, android and ios, and the hosts of its host lane, among linux
+// and macos.
+lanes = List("host", "android", "ios")
+hosts = List("linux", "macos")

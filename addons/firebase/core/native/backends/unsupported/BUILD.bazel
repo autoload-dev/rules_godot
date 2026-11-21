@@ -1,0 +1,10 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(default_visibility = ["//core:__subpackages__"])
+
+cc_library(
+    name = "unsupported",
+    srcs = ["unsupported_backend.cc"],
+    deps = ["//core/native:backend_api"],
+    alwayslink = True,
+)

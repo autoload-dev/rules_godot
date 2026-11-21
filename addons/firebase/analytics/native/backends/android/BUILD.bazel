@@ -1,0 +1,29 @@
+load("@rules_android//rules:rules.bzl", "android_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(default_visibility = ["//analytics:__subpackages__"])
+
+cc_library(
+    name = "android",
+    srcs = ["android_backend.cc"],
+    target_compatible_with = ["@platforms//os:android"],
+    deps = [
+        "//analytics/native:backend_api",
+        "@godot_cpp",
+    ],
+)
+
+android_library(
+    name = "plugin",
+    srcs = ["dev/autoload/firebase/analytics/FirebaseAnalyticsPlugin.java"],
+    custom_package = "dev.autoload.firebase.analytics",
+    exports_manifest = 1,
+    manifest = "AndroidManifest.xml",
+    proguard_specs = ["consumer-rules.pro"],
+    target_compatible_with = ["@platforms//os:android"],
+    deps = [
+        "@godot//android:plugin_api",
+        "@maven//:com_google_android_gms_play_services_measurement_api",
+        "@maven//:com_google_firebase_firebase_analytics",
+    ],
+)

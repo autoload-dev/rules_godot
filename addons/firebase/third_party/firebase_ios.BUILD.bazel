@@ -1,0 +1,47 @@
+# Firebase.zip of the Firebase Apple SDK: one directory per product, holding the static
+# XCFrameworks that product needs, the core's among them. @autoload_firebase//ios links them
+# into one dynamic framework per product.
+load("@rules_apple//apple:apple.bzl", "apple_static_xcframework_import")
+
+package(default_visibility = ["//visibility:public"])
+
+# BUILD files cannot define functions; target names are the directory names. A product's
+# directory holds the core's frameworks too, but only FirebaseAnalytics/ is read for them.
+_ANALYTICS = glob(
+    ["FirebaseAnalytics/*.xcframework"],
+    exclude_directories = 0,
+)
+
+# The frameworks of Cloud Firestore beyond those of the core.
+_FIRESTORE = glob(
+    ["FirebaseFirestore/*.xcframework"],
+    exclude_directories = 0,
+)
+
+# Firebase relies on Objective-C categories, which -ObjC loads; alwayslink does the same per
+# framework. Frameworks with Swift code need the Swift runtime in the link.
+[
+    apple_static_xcframework_import(
+        name = path.split("/")[-1][:-len(".xcframework")],
+        alwayslink = True,
+        has_swift = len(glob([path + "/**/*.swiftmodule/**"], allow_empty = True)) > 0,
+        xcframework_imports = glob([path + "/**"]),
+    )
+    for path in _ANALYTICS + _FIRESTORE
+]
+
+# What the frameworks of @autoload_firebase//ios copy from the iOS slices: headers,
+# modules and resource bundles.
+filegroup(
+    name = "xcframework_files",
+    srcs = glob(
+        [
+            "FirebaseAnalytics/*.xcframework/ios-*/**",
+            "FirebaseFirestore/*.xcframework/ios-*/**",
+        ],
+        exclude = [
+            "FirebaseAnalytics/*.xcframework/ios-*-maccatalyst/**",
+            "FirebaseFirestore/*.xcframework/ios-*-maccatalyst/**",
+        ],
+    ),
+)
