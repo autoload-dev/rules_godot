@@ -1,0 +1,63 @@
+[gd_scene load_steps=3 format=3 uid="uid://cjaaitomst65x"]
+
+[ext_resource type="Script" uid="uid://btyxm4k5riim4" path="res://main/demo.gd" id="1"]
+[ext_resource type="Script" uid="uid://cayddpoh7dbai" path="res://main/firestore_demo.gd" id="2"]
+
+[node name="Demo" type="Control" unique_id=1406187254]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Column" type="VBoxContainer" parent="." unique_id=902114731]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 48.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Platform" type="Label" parent="Column" unique_id=1734482215]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LogEvent" type="Button" parent="Column" unique_id=511287903]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Log event"
+
+[node name="Status" type="Label" parent="Column" unique_id=1288841605]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Firestore" type="VBoxContainer" parent="Column" unique_id=1630458812]
+layout_mode = 2
+script = ExtResource("2")
+
+[node name="WriteDocument" type="Button" parent="Column/Firestore" unique_id=377920135]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Write document"
+
+[node name="ReadDocument" type="Button" parent="Column/Firestore" unique_id=1912763390]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Read document"
+
+[node name="QueryDocuments" type="Button" parent="Column/Firestore" unique_id=845120967]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Query documents"
+
+[node name="FirestoreStatus" type="Label" parent="Column/Firestore" unique_id=1254870031]
+unique_name_in_owner = true
+layout_mode = 2
+autowrap_mode = 3

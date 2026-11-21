@@ -1,0 +1,16 @@
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+
+py_binary(
+    name = "google_services",
+    srcs = ["google_services.py"],
+    visibility = ["//visibility:public"],
+)
+
+py_test(
+    name = "google_services_test",
+    srcs = ["tests/google_services_test.py"],
+    data = glob(["tests/testdata/*"]),
+    imports = ["."],
+    main = "tests/google_services_test.py",
+    deps = [],
+)

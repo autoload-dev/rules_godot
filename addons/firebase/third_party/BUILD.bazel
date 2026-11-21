@@ -1,0 +1,1 @@
+exports_files(["firebase_ios.BUILD.bazel"])

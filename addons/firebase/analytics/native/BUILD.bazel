@@ -1,0 +1,30 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(default_visibility = ["//analytics:__subpackages__"])
+
+# Headers are included as firebase/<add-on>/native/...; see README.md, "Design".
+
+cc_library(
+    name = "backend_api",
+    hdrs = ["backend.h"],
+    include_prefix = "firebase",
+    strip_include_prefix = "/",
+    deps = ["@godot_cpp"],
+)
+
+cc_library(
+    name = "native",
+    srcs = ["analytics.cc"],
+    hdrs = ["analytics.h"],
+    include_prefix = "firebase",
+    strip_include_prefix = "/",
+    deps = [
+        ":backend_api",
+        "@godot_cpp",
+    ],
+)
+
+filegroup(
+    name = "registration",
+    srcs = ["register_types.cc"],
+)

@@ -1,0 +1,4 @@
+/bazel-*
+/user.bazelrc
+.godot-editor/
+/signing/

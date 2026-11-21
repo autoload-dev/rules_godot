@@ -1,0 +1,84 @@
+load(":framework.bzl", "firebase_framework")
+
+package(default_visibility = ["//:__subpackages__"])
+
+# The Firebase Apple SDK as one dynamic framework per product (README.md, "Design"). An
+# Apple backend links its product's framework; its extension lists the framework's
+# `.bundle` import in platform_deps, through which the application embeds it with the
+# frameworks it links.
+
+_VERSION = "13.2.0"
+
+# The system libraries of the Firebase frameworks, as their module maps link them.
+_SDK_FRAMEWORKS = [
+    "Foundation",
+    "Security",
+    "SystemConfiguration",
+    "UIKit",
+]
+
+_SDK_DYLIBS = [
+    "c++",
+    "sqlite3",
+    "z",
+]
+
+# FirebaseCore.framework: the default app and the libraries every product needs. It holds
+# the application's only FIRApp.
+firebase_framework(
+    name = "core",
+    framework_name = "FirebaseCore",
+    libraries = ["@firebase_ios//:" + n for n in [
+        "FirebaseCore",
+        "FirebaseCoreInternal",
+        "FirebaseInstallations",
+        "GoogleUtilities",
+        "FBLPromises",
+        "nanopb",
+    ]],
+    sdk_dylibs = _SDK_DYLIBS,
+    sdk_frameworks = _SDK_FRAMEWORKS,
+    version = _VERSION,
+)
+
+# FirebaseAnalytics.framework: Google Analytics, linked against FirebaseCore.framework.
+firebase_framework(
+    name = "analytics",
+    framework_name = "FirebaseAnalytics",
+    frameworks = [":core"],
+    libraries = ["@firebase_ios//:" + n for n in [
+        "FirebaseAnalytics",
+        "GoogleAdsOnDeviceConversion",
+        "GoogleAppMeasurement",
+        "GoogleAppMeasurementIdentitySupport",
+    ]],
+    sdk_dylibs = _SDK_DYLIBS,
+    sdk_frameworks = _SDK_FRAMEWORKS + ["StoreKit"],
+    version = _VERSION,
+)
+
+# FirebaseFirestore.framework: Cloud Firestore with gRPC, BoringSSL and LevelDB, linked
+# against FirebaseCore.framework.
+firebase_framework(
+    name = "firestore",
+    framework_name = "FirebaseFirestore",
+    frameworks = [":core"],
+    # FirebaseFirestore.h includes the Objective-C API of FirebaseFirestoreInternal.
+    header_libraries = ["@firebase_ios//:FirebaseFirestoreInternal"],
+    libraries = ["@firebase_ios//:" + n for n in [
+        "FirebaseAppCheckInterop",
+        "FirebaseCoreExtension",
+        "FirebaseFirestore",
+        "FirebaseFirestoreInternal",
+        "FirebaseSharedSwift",
+        "absl",
+        "grpc",
+        "grpcpp",
+        "leveldb",
+        "openssl_grpc",
+    ]],
+    sdk_dylibs = _SDK_DYLIBS,
+    # gRPC watches network reachability with Network.framework.
+    sdk_frameworks = _SDK_FRAMEWORKS + ["Network"],
+    version = _VERSION,
+)

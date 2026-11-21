@@ -1,0 +1,15 @@
+{
+  "homepage": "https://github.com/autoload-dev/rules_godot/tree/main/addons/firebase",
+  "maintainers": [
+    {
+      "name": "Gabriel Terwesten",
+      "github": "blaugold",
+      "github_user_id": 5929595
+    }
+  ],
+  "repository": [
+    "github:autoload-dev/rules_godot"
+  ],
+  "versions": [],
+  "yanked_versions": {}
+}

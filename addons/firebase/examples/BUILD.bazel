@@ -1,0 +1,10 @@
+# The local, gitignored iOS provisioning profile of the example applications. Empty without
+# one; only device builds with --define=ios_signing=local select it.
+filegroup(
+    name = "provisioning_profile",
+    srcs = glob(
+        ["signing/firebase*.mobileprovision"],
+        allow_empty = True,
+    ),
+    visibility = ["//projects:__subpackages__"],
+)

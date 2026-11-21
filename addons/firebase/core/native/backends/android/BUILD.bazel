@@ -1,0 +1,31 @@
+load("@rules_android//rules:rules.bzl", "android_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(default_visibility = ["//core:__subpackages__"])
+
+cc_library(
+    name = "android",
+    srcs = ["android_backend.cc"],
+    target_compatible_with = ["@platforms//os:android"],
+    deps = [
+        "//core/native:backend_api",
+        "@godot_cpp",
+    ],
+)
+
+# The Godot Android plugin with firebase-common from the root module's shared Maven graph;
+# applications containing the add-on package it without listing it.
+android_library(
+    name = "plugin",
+    srcs = ["dev/autoload/firebase/core/FirebaseCorePlugin.java"],
+    custom_package = "dev.autoload.firebase.core",
+    exports_manifest = 1,
+    manifest = "AndroidManifest.xml",
+    proguard_specs = ["consumer-rules.pro"],
+    target_compatible_with = ["@platforms//os:android"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@godot//android:plugin_api",
+        "@maven//:com_google_firebase_firebase_common",
+    ],
+)

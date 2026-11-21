@@ -1,0 +1,124 @@
+"""Firebase for Godot: Godot add-ons of autoload-dev, consumed by Godot applications through Bazel.
+
+Core, Analytics and Firestore share one Firebase SDK, so they form one module with one
+version."""
+
+module(
+    name = "autoload_firebase",
+    version = "0.1.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+# The release of rules_godot the add-ons need. They need its iOS extension frameworks, which
+# came after 0.1.1: raise the version to the release that has them before this module is
+# released. Builds in this repository use the rules beside them instead
+# (addons/module.bazelrc and examples/MODULE.bazel).
+bazel_dep(name = "autoload_rules_godot", version = "0.1.1")
+bazel_dep(name = "apple_support", version = "2.9.1")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_android", version = "0.8.0")
+bazel_dep(name = "rules_apple", version = "5.3.1")
+bazel_dep(name = "rules_cc", version = "0.2.27")
+
+# 7.2 or later: with resolver = "gradle", 6.10 pins the POM's checksum for the Kotlin
+# Multiplatform artifacts Firebase pulls in (androidx.datastore), and their fetch fails.
+bazel_dep(name = "rules_jvm_external", version = "7.2")
+bazel_dep(name = "rules_python", version = "2.4.5")
+
+# The engine whose Android plugin API the add-ons' Java plugins compile against. The root
+# module owns the name; identical requests from several modules coalesce.
+godot_engines = use_extension("@autoload_rules_godot//godot:extensions.bzl", "godot_engines")
+godot_engines.prebuilt(
+    name = "godot",
+    version = "4.7.2",
+)
+use_repo(godot_engines, "godot")
+
+# Builds in this directory, such as `bazel test //...`; applications register their own.
+register_toolchains(
+    "@godot//toolchains:all",
+    dev_dependency = True,
+)
+
+# The add-ons' own godot-cpp, with the classes their native code uses.
+godot_cpp_bindings = use_repo_rule(
+    "@autoload_rules_godot//godot/extension:repositories.bzl",
+    "godot_cpp_bindings",
+)
+
+godot_cpp_bindings(
+    name = "godot_cpp",
+    api_path = "gdextension/extension_api-4-7.json",
+    enabled_classes = [
+        "Engine",
+        "Object",
+        "RefCounted",
+    ],
+)
+
+# Kotlin Multiplatform modules of androidx.datastore, which firebase-common uses for its
+# heartbeat storage, at the version Firebase selects. The gradle resolver of
+# rules_jvm_external (7.2) resolves for the JVM and maps each root module to its JVM module,
+# which lacks the Android API firebase-common calls (PreferenceDataStoreDelegateKt): Firestore
+# crashes with NoClassDefFoundError on its first request. The overrides below select the
+# Android modules instead. Remove them, and the Guava pin below, once the gradle resolver
+# resolves for Android (org.gradle.jvm.environment=android), and repin.
+_DATASTORE_MODULES = [
+    "datastore",
+    "datastore-core",
+    "datastore-preferences",
+    "datastore-preferences-core",
+]
+
+# Android: the Firebase libraries join the root module's @maven graph. The root module lists
+# autoload_firebase in known_contributing_modules and pins the merged graph in its lock file.
+# Versions of Firebase Android BoM 35.2.0.
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven",
+    artifacts = [
+        "com.google.firebase:firebase-analytics:24.0.0",
+        "com.google.firebase:firebase-common:23.0.0",
+        "com.google.firebase:firebase-firestore:27.2.0",
+    ] + ["androidx.datastore:%s-android:1.1.7" % m for m in _DATASTORE_MODULES],
+    repositories = [
+        "https://dl.google.com/dl/android/maven2",
+        "https://repo.maven.apache.org/maven2",
+    ],
+)
+
+# Firestore's gRPC selects Guava 33.6.0-android. Guava's Gradle module metadata hands a JVM
+# resolution the JRE jar of that version, and the gradle resolver of rules_jvm_external
+# (7.2) records the JRE jar's checksum under the Android coordinates, so the fetch fails.
+# Requesting the JRE flavor keeps coordinates and checksum together; the graph holds Guava's
+# JRE flavor anyway (protobuf's). Keep the version at the one gRPC selects.
+maven.artifact(
+    name = "maven",
+    artifact = "guava",
+    force_version = True,
+    group = "com.google.guava",
+    version = "33.6.0-jre",
+)
+
+[
+    maven.override(
+        name = "maven",
+        coordinates = "androidx.datastore:" + m,
+        target = "@maven//:androidx_datastore_%s_android" % m.replace("-", "_"),
+    )
+    for m in _DATASTORE_MODULES
+]
+
+use_repo(maven, "maven")
+
+# iOS: Firebase's official binary distribution, static XCFrameworks. No SwiftPM, so a
+# consuming root module needs no Swift package setup of its own.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "firebase_ios",
+    build_file = "//third_party:firebase_ios.BUILD.bazel",
+    sha256 = "528356de371830b3bbd0c32dbb649c080c8d36a6ef3d057590739eff6deaefcb",
+    strip_prefix = "Firebase",
+    urls = ["https://github.com/firebase/firebase-ios-sdk/releases/download/13.2.0/Firebase.zip"],
+)

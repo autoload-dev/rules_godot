@@ -4,3 +4,4 @@
 # .bcr/<root>/.
 moduleRoots:
   - "."
+  - "addons/firebase"
