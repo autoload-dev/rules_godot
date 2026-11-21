@@ -1,6 +1,5 @@
 exports_files([
     "dart_sdk.BUILD.bazel",
     "dart_sdk.patch",
-    "gdunit4.BUILD.bazel",
     "sqlite.BUILD.bazel",
 ])

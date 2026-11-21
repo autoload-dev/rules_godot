@@ -1,5 +1,5 @@
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
 load("@autoload_rules_godot//godot:defs.bzl", "godot_project", "godot_resources")
-load("@autoload_rules_godot//godot/gdunit:defs.bzl", "godot_gdunit_test")
 
 package(default_testonly = True)
 
@@ -12,11 +12,11 @@ godot_resources(
     ],
     deps = [
         "//shared_addon:native_counter",
-        "@gdunit4",
+        "@autoload_gdunit//:gdunit",
     ],
 )
 
-godot_gdunit_test(
+gdunit_test(
     name = "counter_increments_and_resets_test",
     size = "small",
     project = ":counter_increments_and_resets_test_project",

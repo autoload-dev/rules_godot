@@ -1,0 +1,15 @@
+load("@autoload_rules_godot//godot:defs.bzl", "godot_addon")
+
+# GdUnit4 (github.com/godot-gdunit-labs/gdUnit4) at addons/gdUnit4, for the suites of
+# gdunit_test: list it in the deps of the suites. Its editor part is the editor plugin and
+# the scenes it docks, which only the editor loads. Test-only, so production resources
+# cannot depend on it.
+godot_addon(
+    name = "gdunit",
+    testonly = True,
+    srcs = ["@gdunit4//:runtime"],
+    directory = "addons/gdUnit4",
+    editor_srcs = ["@gdunit4//:editor"],
+    strip_prefix = "addons/gdUnit4",
+    visibility = ["//visibility:public"],
+)

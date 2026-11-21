@@ -1,0 +1,12 @@
+# The Bazel Central Registry's checks of a release; .bcr/addons/gdunit/ holds a copy
+# (mise run addons:generate).
+matrix:
+  platform: ["macos", "macos_arm64", "ubuntu2204"]
+  bazel: ["9.*"]
+tasks:
+  verify_targets:
+    name: Build the add-ons
+    platform: ${{ platform }}
+    bazel: ${{ bazel }}
+    build_targets:
+      - "@autoload_gdunit//..."

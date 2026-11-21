@@ -1,7 +1,0 @@
-# The GdUnit test adapter godot_gdunit_test runs as its main script; each test declares it
-# as resources of its own, which use GdUnit through the suites' deps. Public because the
-# test target lives in the caller's package.
-exports_files(
-    ["run.gd"],
-    visibility = ["//visibility:public"],
-)

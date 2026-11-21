@@ -7,6 +7,17 @@ from tools.conventions.context import Context, Location
 from tools.conventions.framework import Finding, RuleInfo
 
 
+def _white_box(path: Path, module: Path) -> bool:
+    """Whether a configuration is a fixture: the ruleset's, or of an add-on module's tests."""
+    if module == Path("."):
+        return True
+    return (
+        module.parent.parent == Path("addons")
+        and module.name == "examples"
+        and path.relative_to(module).parts[0] == "tests"
+    )
+
+
 class TypedRootLayout:
     info = RuleInfo(
         "RG009",
@@ -18,9 +29,10 @@ class TypedRootLayout:
         workspace = context.workspace
         configurations = workspace.godot_configurations
         for path in sorted(configurations):
-            # Consumer modules keep Godot configurations in their typed roots; the ruleset
-            # module's white-box fixtures may live anywhere.
-            if workspace.owner(path.as_posix()) == Path("."):
+            # Consumer modules keep Godot configurations in their typed roots; white-box
+            # fixtures of the ruleset module, and the fixtures of an add-on module's tests in
+            # its examples/tests/, may live anywhere there.
+            if _white_box(path, workspace.owner(path.as_posix())):
                 continue
             if workspace.typed_directory(path) is not None:
                 continue

@@ -7,7 +7,8 @@ config/name.mobile="StrictWarnings Mobile"
 
 [debug]
 
-; Every GDScript warning is an error, also below res://addons/, except in GdUnit itself.
+; Every GDScript warning is an error, also below res://addons/, which Godot's default
+; directory_rules exempt.
 gdscript/warnings/unassigned_variable=2
 gdscript/warnings/unassigned_variable_op_assign=2
 gdscript/warnings/unused_variable=2
@@ -57,7 +58,7 @@ gdscript/warnings/onready_with_export=2
 gdscript/warnings/property_used_as_function=2
 gdscript/warnings/constant_used_as_function=2
 gdscript/warnings/function_used_as_property=2
-gdscript/warnings/directory_rules={"res://addons/gdUnit4": 0}
+gdscript/warnings/directory_rules={"res://addons": 1}
 
 [rendering]
 renderer/rendering_method="gl_compatibility"

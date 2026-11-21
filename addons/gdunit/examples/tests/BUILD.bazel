@@ -1,0 +1,72 @@
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
+
+package(default_testonly = True)
+
+_SUITES = "//tests/fixtures/gdunit_suites"
+
+_STRICT = "//tests/fixtures/strict_warnings"
+
+# Run test: the passing suites pass with two shards splitting them round-robin.
+gdunit_test(
+    name = "sharded_gdunit_suites_pass_test",
+    size = "small",
+    project = _SUITES + ":project",
+    shard_count = 2,
+    suites = [_SUITES + ":passing_suites"],
+)
+
+# Run test: the GdUnit adapter runs a suite in a project that treats every GDScript warning
+# as an error.
+gdunit_test(
+    name = "gdunit_under_strict_warnings_test",
+    size = "small",
+    project = _STRICT + ":project",
+    suites = [_STRICT + ":suites"],
+)
+
+# The drivers' helpers: running a test target as Bazel does, and reading a pack.
+py_library(
+    name = "support",
+    srcs = [
+        "__init__.py",
+        "contract.py",
+        "pck.py",
+    ],
+)
+
+# Run test: GdUnit tests report, shard, filter, forward arguments, pass with orphan nodes and
+# fail the way Bazel's test encyclopedia requires.
+py_test(
+    name = "gdunit_test_follows_test_encyclopedia_test",
+    size = "small",
+    srcs = ["gdunit_launcher_test.py"],
+    args = [
+        "$(rootpath :sharded_gdunit_suites_pass_test)",
+        "$(rootpath %s:failing_suite)" % _SUITES,
+        "$(rootpath %s:empty_suite)" % _SUITES,
+        "$(rootpath %s:skipped_suite)" % _SUITES,
+        "$(rootpath %s:orphan_suite)" % _SUITES,
+    ],
+    data = [
+        ":sharded_gdunit_suites_pass_test",
+        _SUITES + ":empty_suite",
+        _SUITES + ":failing_suite",
+        _SUITES + ":orphan_suite",
+        _SUITES + ":skipped_suite",
+    ],
+    main = "gdunit_launcher_test.py",
+    deps = [":support"],
+)
+
+# Build-output test: a pack with GdUnit4 builds without the report templates Godot ignores
+# and without the scenes its editor plugin docks.
+py_test(
+    name = "gdunit4_pack_leaves_out_editor_scenes_test",
+    size = "small",
+    srcs = ["gdunit4_pack_test.py"],
+    args = ["$(rootpath %s:gdunit4_pack)" % _SUITES],
+    data = [_SUITES + ":gdunit4_pack"],
+    main = "gdunit4_pack_test.py",
+    deps = [":support"],
+)

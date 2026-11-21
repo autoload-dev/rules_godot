@@ -83,37 +83,24 @@ Replace `//path/to:target` with your test label.
 
 ### GdUnit
 
-`godot_gdunit_test` from `@autoload_rules_godot//godot/gdunit:defs.bzl` is a `godot_test`
-whose main script is rules_godot's GdUnit test adapter, as `py_pytest_test` is a
-`py_test` that runs pytest. A suite is a script of a `suites` target, generated ones
-included, that extends GdUnit's `GdUnitTestSuite`, as GdUnit itself defines one; helper
-scripts and sidecars beside the suites are none. The suites bring what they use through
-their own `deps`, GdUnit itself included, pinned in your module. Arguments after
-Godot's `--` in `args`, and those from `--test_arg`, are GdUnit options. The
-test adapter
-
-- runs only the suites whose `res://` path contains the `--test_filter` value,
-- distributes those round-robin over `shard_count` shards,
-- hands GdUnit's JUnit report to Bazel and keeps all its reports among the
-  undeclared outputs under `gdunit/`,
-- fails when a test fails or none runs, including when all are skipped, and when its
-  `suites` hold no suite; a shard or `--test_filter` that leaves no suite passes,
-- passes with orphan nodes, as GdUnit's command line does, and names the tests that
-  left them in the log.
-
-GdUnit's assertions provoke engine errors deliberately, so only its results
-decide.
+GdUnit4 comes from the add-on module `autoload_gdunit` of this repository: its add-on
+`@autoload_gdunit//:gdunit` and `gdunit_test` from `@autoload_gdunit//:defs.bzl`, a
+`godot_test` whose main script is a GdUnit test adapter, as `py_pytest_test` is a
+`py_test` that runs pytest. The adapter follows Bazel's test contract: `shard_count`,
+`--test_filter` and the JUnit report work as for any Bazel test.
 
 ```starlark
-load("@autoload_rules_godot//godot/gdunit:defs.bzl", "godot_gdunit_test")
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
+load("@autoload_rules_godot//godot:defs.bzl", "godot_resources")
 
 godot_resources(
     name = "unit_suites",
+    testonly = True,
     srcs = glob(["test/**/*_test.gd"]),
-    deps = [":game", "@gdunit4"],
+    deps = [":game", "@autoload_gdunit//:gdunit"],
 )
 
-godot_gdunit_test(
+gdunit_test(
     name = "unit_tests",
     project = ":project",
     suites = [":unit_suites"],
@@ -121,49 +108,8 @@ godot_gdunit_test(
 )
 ```
 
-For the snippet's target, `bazel test //path/to:unit_tests --test_filter=inventory_test`
-runs one suite; replace `path/to` with its package. Bazel caches
-a test target as a whole: split suites into several targets where a change should
-rerun only some of them.
-
-A `godot_gdunit_test` runs every suite of its `suites` targets, so give each test
-environment its own suites target, such as host unit suites and device integration
-suites. Where suites of both environments use the same classes, move those classes
-into a third `godot_resources` target that both depend on, as a Bazel package splits
-shared test helpers into a `testonly` library. Keep the device test out of host runs
-with `tags = ["manual"]`:
-
-```starlark
-godot_resources(
-    name = "test_support",
-    testonly = True,
-    srcs = glob(["test/support/**/*.gd"]),
-    deps = [":game", "@gdunit4"],
-)
-
-godot_resources(
-    name = "unit_suites",
-    testonly = True,
-    srcs = glob(["test/unit/**/*_test.gd"]),
-    deps = [":test_support"],
-)
-
-godot_resources(
-    name = "device_suites",
-    testonly = True,
-    srcs = glob(["test/device/**/*_test.gd"]),
-    deps = [":test_support"],
-)
-
-godot_gdunit_test(name = "unit_tests", project = ":project", suites = [":unit_suites"])
-
-godot_gdunit_test(
-    name = "device_tests",
-    project = ":project",
-    suites = [":device_suites"],
-    tags = ["manual"],
-)
-```
+The [module's README](../../addons/gdunit/README.md) describes how to depend on it, what a
+suite is, how the test passes and fails and how to split suites across test environments.
 
 Bazel owns test-result caching and selected configuration matrices. Declare
 separate test targets, with a project of their own where the configuration differs, and choose toolchains and target platforms using normal Bazel

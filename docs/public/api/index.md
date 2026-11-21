@@ -16,7 +16,6 @@ Choose an entrypoint by task. Each public symbol has one reference and one publi
 | Primary load entrypoint | Purpose and symbols |
 | --- | --- |
 | `@autoload_rules_godot//godot:defs.bzl` | Compose resources, add-ons and projects, export PCKs, run games and application tests, open projects in the editor and write their sidecars.<br>[`godot_resources`](reference/godot_defs.md#godot_resources), [`godot_addon`](reference/godot_defs.md#godot_addon), [`godot_project`](reference/godot_defs.md#godot_project), [`godot_pack`](reference/godot_defs.md#godot_pack), [`godot_run`](reference/godot_defs.md#godot_run), [`godot_test`](reference/godot_defs.md#godot_test), [`godot_editor`](reference/godot_defs.md#godot_editor), [`godot_metadata_sync`](reference/godot_defs.md#godot_metadata_sync) |
-| `@autoload_rules_godot//godot/gdunit:defs.bzl` | Run GdUnit4 suites as a Bazel test with sharding, test filters and JUnit reports.<br>[`godot_gdunit_test`](reference/godot_gdunit_defs.md#godot_gdunit_test) |
 
 ## Extensions
 

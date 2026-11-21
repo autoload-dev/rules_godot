@@ -1,0 +1,29 @@
+load("@autoload_rules_godot//godot:app.bzl", "godot_app")
+load("@autoload_rules_godot//godot:defs.bzl", "godot_editor", "godot_pack", "godot_project")
+
+package(default_visibility = ["//projects/scores:__subpackages__"])
+
+godot_project(
+    name = "project",
+    project_file = "project.godot",
+)
+
+# The game without its suites, which only its tests and the editor load.
+godot_pack(
+    name = "pack",
+    project = ":project",
+    deps = ["//projects/scores/main"],
+)
+
+godot_editor(
+    name = "edit",
+    testonly = True,
+    project = ":project",
+    deps = ["//projects/scores/tests:suites"],
+)
+
+godot_app(
+    name = "app",
+    application_id = "dev.autoload.examples.gdunit",
+    pack = ":pack",
+)

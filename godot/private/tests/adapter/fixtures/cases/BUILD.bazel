@@ -1,0 +1,44 @@
+load("//godot:defs.bzl", "godot_project", "godot_resources")
+
+# The fake adapter's cases in one project.
+package(
+    default_testonly = True,
+    default_visibility = ["//godot/private/tests:__subpackages__"],
+)
+
+godot_project(
+    name = "project",
+    project_file = "project.godot",
+    tags = ["manual"],
+)
+
+# Three passing cases, whose path order is first, second/second, third, listed with a file
+# that is no case.
+godot_resources(
+    name = "passing",
+    srcs = [
+        "first_case.txt",
+        "notes.txt",
+        "second/second_case.txt",
+        "third_case.txt",
+    ],
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "failing",
+    srcs = ["failing_case.txt"],
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "error",
+    srcs = ["error_case.txt"],
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "none",
+    srcs = ["notes.txt"],
+    tags = ["manual"],
+)

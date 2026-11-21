@@ -1,0 +1,21 @@
+load("@autoload_rules_godot//godot:defs.bzl", "godot_project", "godot_resources")
+
+# A project that treats every GDScript warning as an error, below res://addons/ too except in
+# GdUnit itself, with a GdUnit suite.
+package(
+    default_testonly = True,
+    default_visibility = ["//tests:__pkg__"],
+)
+
+godot_project(
+    name = "project",
+    project_file = "project.godot",
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "suites",
+    srcs = ["suites/StrictTest.gd"],
+    tags = ["manual"],
+    deps = ["@autoload_gdunit//:gdunit"],
+)

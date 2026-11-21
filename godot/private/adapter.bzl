@@ -5,7 +5,10 @@ load("//godot/private:providers.bzl", "GodotResourcesInfo")
 load("//godot/private:resources.bzl", "godot_resources", "own_paths")
 load("//godot/private:run.bzl", "godot_test")
 
-visibility("//godot/...")
+# Test framework modules, such as autoload_gdunit, load adapter_test across repositories. It
+# is no supported API (docs/public/api/modules.bzl): each such module pins a matching
+# rules_godot.
+visibility("public")
 
 def _case_list_impl(ctx):
     cases = sorted({

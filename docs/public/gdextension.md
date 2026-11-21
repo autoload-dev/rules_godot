@@ -214,7 +214,7 @@ library in the tool configuration: the same declaration built for their platform
 `@autoload_rules_godot//godot:tool` and `:editor` match and the feature tags end in `editor`.
 Projects, packs and applications receive the target configuration's fragment. Source runs
 run in the [editor variant](platforms.md#the-editor-variant), whatever variant the build
-selects: `godot_run` and `godot_test` with `deps`, `godot_gdunit_test` and a
+selects: `godot_run` and `godot_test` with `deps`, autoload_gdunit's `gdunit_test` and a
 `godot_app` of the editor variant load the library of that variant for their target
 platform, the `:editor` branch of a `select()`. A `godot_run` or `godot_test` of a
 `pack` runs the pack with the editor in the pack's variant; for a `release` pack it lists
@@ -474,7 +474,7 @@ and line numbers.
 
 ## Verify your integration
 
-Use the public `godot_test` or `godot_gdunit_test` rules to exercise the
+Use `godot_test` or autoload_gdunit's `gdunit_test` to exercise the
 extension from GDScript in your project's test packages. A source-run smoke test
 should load the extension and instantiate its registered classes; a test of
 the exported pack also checks the staged extension libraries. See

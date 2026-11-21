@@ -1,0 +1,6 @@
+// How this repository verifies the module (addons/AGENTS.md, "Lanes"): the lanes that run
+// when it changes, among host, android and ios, and the hosts of its host lane, among linux
+// and macos.
+// GdUnit runs on the host only: its add-on is test-only and no application ships it.
+lanes = List("host")
+hosts = List("linux", "macos")

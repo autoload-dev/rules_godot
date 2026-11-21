@@ -161,7 +161,7 @@ that the documented workflow succeeds.
 ## RG007
 
 **Godot test operations and their helpers are test-only.** The targets created by
-`godot_test` and `godot_gdunit_test` must have effective
+`godot_test` and autoload_gdunit's `gdunit_test` must have effective
 `testonly = True`. This includes their generated case lists, resources and views of
 the project. They belong exclusively to the test operation and must not become production
 dependencies, following [test ownership](project-layout.md#test-ownership).
@@ -252,8 +252,9 @@ alone do not establish an add-on. A helper library should not be put in a projec
 and given an empty Godot project just to fit the taxonomy.
 
 The check inventories project and add-on directories and authored `project.godot` files in
-every consumer module; the ruleset module's white-box fixture projects are outside it. Configurations must belong to a named project or add-on. Temporary projects
-constructed inside source strings and generated configuration templates are outside the
+every consumer module; the white-box fixture projects of the ruleset module and of an add-on
+module's `tests/` are outside it. Configurations must belong to a named project or add-on.
+Temporary projects constructed inside source strings and generated configuration templates are outside the
 inventory. This does not require a project or BUILD package for each assertion. See the
 [test ownership](project-layout.md#test-ownership) for test ownership and
 [the layout guide](project-layout.md) for navigation.

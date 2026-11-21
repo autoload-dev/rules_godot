@@ -1,10 +1,10 @@
 load("//godot:defs.bzl", "godot_pack", "godot_test")
-load("//godot/gdunit:defs.bzl", "godot_gdunit_test")
+load("//godot/private/tests/adapter:fake_adapter.bzl", "fake_adapter_test")
 
 # Every GDScript rules_godot stages into a project loads in a project that treats every
 # GDScript warning as an error: building these tests runs the imports, the initialization,
 # the probes, the validation, the export and the shell probe, and running them the run logger
-# and the GdUnit adapter.
+# and the test adapters' case selection.
 
 _FIXTURE = "//godot/private/tests/strict_warnings/fixtures/project_with_strict_warnings"
 
@@ -39,10 +39,10 @@ godot_test(
     pack = ":pack",
 )
 
-# Run test: the GdUnit adapter runs a suite.
-godot_gdunit_test(
-    name = "gdunit_under_strict_warnings_test",
+# Run test: a test adapter selects its cases with rules_godot's case selection.
+fake_adapter_test(
+    name = "adapter_under_strict_warnings_test",
     size = "small",
+    cases = ["//godot/private/tests/adapter/fixtures/cases:passing"],
     project = _FIXTURE + ":project",
-    suites = [_FIXTURE + ":suites"],
 )

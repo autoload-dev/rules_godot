@@ -3,7 +3,7 @@ Run one lane of an add-on module, with the same commands for every module in add
 
 Each lane runs in the module's examples/, which consumes the module like an application:
 
-- host: the module's tests and every target of its example projects but their apps, for
+- host: the module's tests and every target of its examples but the projects' apps, for
   the editor and this desktop host, on the hosts its addon.pkl names;
 - android and ios: each example project's `app`, for Android and the iOS Simulator.
 """
@@ -32,7 +32,7 @@ def command(lane: str, module: AddonModule) -> list[str]:
         raise ValueError(f"{module.path}: no example project in examples/projects/")
     if lane == "host":
         apps = [f"-//projects/{project}:app" for project in module.projects]
-        return ["bazel", "test", "--", f"@{module.name}//...", "//projects/...", *apps]
+        return ["bazel", "test", "--", f"@{module.name}//...", "//...", *apps]
     apps = [f"//projects/{project}:app" for project in module.projects]
     return ["bazel", "build", APP_CONFIGS[lane], *apps]
 

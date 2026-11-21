@@ -20,8 +20,9 @@ tests and every application package.
   symbols, App Bundles and signing.
 - **Engines:** use Godot's prebuilt engines or build one from source with only the modules
   your game needs.
-- **Tests:** run GDScript and [GdUnit4](https://github.com/MikeSchulze/gdUnit4) tests as
-  Bazel tests.
+- **Tests:** run GDScript tests as Bazel tests, and
+  [GdUnit4](https://github.com/godot-gdunit-labs/gdUnit4) suites with the add-on module
+  [`autoload_gdunit`](addons/gdunit/README.md).
 - **Hermetic:** Bazel downloads the editor and export templates; no globally installed Godot
   is needed.
 

@@ -82,6 +82,19 @@ local regressionModule = List(
 // What every step that builds in tests/ reads before its own inputs.
 local regressionCore = core + regressionModule
 
+// What examples/ and tests/ read of autoload_gdunit, whose gdunit_test runs their GdUnit
+// suites: the add-on and the macro, not the module's examples and tests. Only the tasks that
+// run GdUnit suites read it. The adapter the macro loads has its own contract test in
+// godot/private/tests/adapter, so rule changes alone do not select the module's lane.
+local gdunitModule = List(
+  "addons/gdunit/MODULE.bazel",
+  "addons/gdunit/REPO.bazel",
+  "addons/gdunit/BUILD.bazel",
+  "addons/gdunit/defs.bzl",
+  "addons/gdunit/private/**",
+  "addons/gdunit/third_party/**",
+)
+
 local conventionSources = List(
   "**/BUILD",
   "**/BUILD.bazel",
@@ -246,7 +259,7 @@ local checks = new Mapping<String, Step> {
   ["test:regressions"] = (task("test:regressions")) {
     profiles = List("host")
     exclude = consumerExcludeAll
-    glob = core + List("tests/**")
+    glob = core + List("tests/**") + gdunitModule
   }
   for (example, inputs in exampleInputs) {
     ["test:example:" + example] = (task("test:example:" + example)) {
@@ -259,10 +272,9 @@ local checks = new Mapping<String, Step> {
         "examples/*.bzl",
         "examples/BUILD.bazel",
         "examples/deps/BUILD.bazel",
-        "examples/deps/gdunit4.BUILD.bazel",
         "examples/addons/" + example + "/**",
         "examples/projects/" + example + "/**",
-      ) + inputs
+      ) + gdunitModule + inputs
     }
   }
   for (module, addon in addonModules) {

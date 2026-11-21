@@ -55,6 +55,16 @@ def regression_contract_packages() -> Iterator[tuple[str, str]]:
         yield f"tests/{package}/BUILD.bazel", f"contracts:{lane}"
 
 
+# The examples whose suites run on the host.
+HOST_EXAMPLES = {
+    "test:example:sqlite",
+    "test:example:platform_paths",
+    "test:example:lichtpost",
+    "test:example:app_auth",
+    "test:example:dart",
+}
+
+
 class SelectionTest(unittest.TestCase):
     def plan(self, *files: str, profiles: tuple[str, ...] = (), cwd: Path = ROOT) -> dict:
         command = [HK]
@@ -77,19 +87,25 @@ class SelectionTest(unittest.TestCase):
         return json.loads(result.stdout)
 
     def test_shared_example_dependencies_select_all_example_suites(self) -> None:
-        for path in ("examples/deps/gdunit4.BUILD.bazel", "examples/deps/BUILD.bazel"):
-            with self.subTest(path=path):
-                lanes = lane_plan(self.plan(path, profiles=PROFILE_LANES))
-                self.assertEqual(
-                    set(lanes["host"]),
-                    {
-                        "test:example:sqlite",
-                        "test:example:platform_paths",
-                        "test:example:lichtpost",
-                        "test:example:app_auth",
-                        "test:example:dart",
-                    },
-                )
+        lanes = lane_plan(self.plan("examples/deps/BUILD.bazel", profiles=PROFILE_LANES))
+        self.assertEqual(set(lanes["host"]), HOST_EXAMPLES)
+
+    def test_gdunit_test_changes_select_its_consumers(self) -> None:
+        lanes = lane_plan(self.plan("addons/gdunit/defs.bzl", profiles=PROFILE_LANES))
+        self.assertEqual(
+            set(lanes["host"]),
+            HOST_EXAMPLES | {"test:regressions", "host:addon:gdunit"},
+        )
+        self.assertEqual(lanes["android"] + lanes["ios"], [])
+
+    def test_gdunit_own_tests_select_only_its_lane(self) -> None:
+        lanes = lane_plan(
+            self.plan(
+                "addons/gdunit/examples/tests/gdunit_launcher_test.py",
+                profiles=PROFILE_LANES,
+            )
+        )
+        self.assertEqual(lanes["host"], ["host:addon:gdunit"])
 
     def test_petri_selects_its_source_engine_suite_and_no_host_example(self) -> None:
         for path in (
@@ -266,7 +282,7 @@ class SelectionTest(unittest.TestCase):
         )
 
     def test_default_check_does_not_build_examples(self) -> None:
-        lanes = lane_plan(self.plan("examples/deps/gdunit4.BUILD.bazel"))
+        lanes = lane_plan(self.plan("examples/deps/BUILD.bazel"))
         self.assertFalse(
             any(lanes[name] for name in ("host", "source-engine", "android", "ios"))
         )

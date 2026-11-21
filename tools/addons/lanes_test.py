@@ -20,7 +20,7 @@ class LanesTest(unittest.TestCase):
                 "test",
                 "--",
                 "@autoload_widget//...",
-                "//projects/...",
+                "//...",
                 "-//projects/demo:app",
                 "-//projects/store:app",
             ],

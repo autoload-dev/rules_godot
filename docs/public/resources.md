@@ -271,7 +271,7 @@ action. They are not automatically discovered or downloaded.
 | `godot_resources` | One import unit: stable paths, transitive membership, import inputs, runtime relationships and the add-ons its files use | Declaring resources needs neither Godot nor a particular project configuration; only genuinely independent conversion work gets a separate cache entry. |
 | `godot_addon` | One add-on: its runtime part, its editor part with its roles, extensions, platform libraries, Info.plist fragments, autoloads and settings | Declared once, it reaches every operation and application containing the resources that use it, and its files never become inputs of their imports. |
 | `godot_project` | The configuration context: `project.godot`, settings, autoloads, main scene and the add-ons it names; every unit imports under it | Holding no resources, one context serves the game's packs, runs, tests and editor views alike, which share each unit's import. |
-| `godot_pack`, `godot_run`, `godot_test`, `godot_gdunit_test`, `godot_editor`, `godot_metadata_sync` | A concrete export, execution, test or editor view of one project over its own `deps` | A test does not need an export; a data pack does not need an app bundle. |
+| `godot_pack`, `godot_run`, `godot_test`, `godot_editor`, `godot_metadata_sync` | A concrete export, execution, test or editor view of one project over its own `deps` | A test does not need an export; a data pack does not need an app bundle. |
 
 Resource references can cycle. Bazel target dependencies cannot: declare mutually
 referencing files together or record their paths in `runtime_references` rather
@@ -294,8 +294,9 @@ godot_resources(
 
 godot_resources(
     name = "inventory_suites",
+    testonly = True,
     srcs = glob(["tests/*_test.gd"]),
-    deps = [":inventory", "@gdunit//:files"],
+    deps = [":inventory", "@autoload_gdunit//:gdunit"],
 )
 
 godot_project(
@@ -303,7 +304,7 @@ godot_project(
     project_file = "test_project.godot",
 )
 
-godot_gdunit_test(
+gdunit_test(
     name = "inventory_test",
     project = ":test_project",
     suites = [":inventory_suites"],

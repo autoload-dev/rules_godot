@@ -6,7 +6,6 @@ load("//godot/engine:defs.bzl", "godot_editor_component", "godot_runtime_compone
 load("//godot/engine/private:prebuilt.bzl", "prebuilt_runtime")
 load("//godot/engine/private/tests:repository_test.bzl", "repository_test")
 load("//godot/extension:defs.bzl", "godot_extension")
-load("//godot/gdunit:defs.bzl", "godot_gdunit_test")
 load(":cases.bzl", "API_CASES", "BEHAVIOR_TESTS")
 load(":mismatch.bzl", "alias_executable_companion", "alias_files_companion", "executable_claim", "good", "missing_group", "pretend_test_companion", "restricted_companion")
 load(":visibility_fixture.bzl", "same_package_leak")
@@ -70,12 +69,6 @@ write_file(
         "cases": API_CASES,
     })],
     visibility = ["//tools/docs:__pkg__"],
-)
-
-godot_gdunit_test(
-    name = "gdunit_test",
-    suites = [":main"],
-    tags = ["manual"],
 )
 
 genrule(

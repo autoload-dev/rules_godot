@@ -1,5 +1,5 @@
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
 load("@autoload_rules_godot//godot:defs.bzl", "godot_resources")
-load("@autoload_rules_godot//godot/gdunit:defs.bzl", "godot_gdunit_test")
 
 package(default_testonly = True)
 
@@ -13,11 +13,11 @@ godot_resources(
     visibility = ["//addons/sqlite/tests:__pkg__"],
     deps = [
         "//addons/sqlite",
-        "@gdunit4",
+        "@autoload_gdunit//:gdunit",
     ],
 )
 
-godot_gdunit_test(
+gdunit_test(
     name = "unit",
     size = "small",
     project = "//addons/sqlite/tests:tests",

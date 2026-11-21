@@ -1,0 +1,21 @@
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
+load("@autoload_rules_godot//godot:defs.bzl", "godot_resources")
+
+# The suites use the game's code and GdUnit, both through their deps; the editor opens them.
+godot_resources(
+    name = "suites",
+    testonly = True,
+    srcs = ["ScoreboardTest.gd"],
+    visibility = ["//projects/scores:__pkg__"],
+    deps = [
+        "//projects/scores/main",
+        "@autoload_gdunit//:gdunit",
+    ],
+)
+
+gdunit_test(
+    name = "unit_tests",
+    size = "small",
+    project = "//projects/scores:project",
+    suites = [":suites"],
+)

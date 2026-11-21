@@ -70,7 +70,6 @@ API_CASES = {
     "//godot:defs.bzl%godot_test": {"target": _FIXTURES + "game_test"},
     "//godot:defs.bzl%godot_editor": {"target": _FIXTURES + "editor"},
     "//godot:defs.bzl%godot_metadata_sync": {"target": _FIXTURES + "metadata"},
-    "//godot/gdunit:defs.bzl%godot_gdunit_test": {"target": _FIXTURES + "gdunit_test"},
     "//godot/extension:defs.bzl%godot_extension": {"target": _FIXTURES + "extension"},
     # Extensions forward CcInfo for the static libraries iOS links.
     "//godot/extension:defs.bzl%godot_extension#cc": {

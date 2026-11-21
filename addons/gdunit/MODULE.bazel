@@ -1,0 +1,25 @@
+"""GdUnit4 for Godot applications built with Bazel: the GdUnit add-on and gdunit_test, which runs
+GdUnit suites as a Bazel test."""
+
+module(
+    name = "autoload_gdunit",
+    version = "0.1.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+# gdunit_test builds on rules_godot's test adapter (godot/private:adapter.bzl), which other
+# repositories can load since after 0.1.1 but which is no supported API: raise the version to
+# the release that has it before this module is released, and keep the two in step. Builds in
+# this repository use the rules beside it (addons/module.bazelrc and examples/MODULE.bazel).
+bazel_dep(name = "autoload_rules_godot", version = "0.1.1")
+
+# GdUnit4 at a commit of its main branch; its add-on directory becomes //:gdunit.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "gdunit4",
+    build_file = "//third_party:gdunit4.BUILD.bazel",
+    sha256 = "3b112b67f7cb85e59f3814ea81473e64b9ddfad351073ce89d496da749a6d1fe",
+    strip_prefix = "gdUnit4-0127a55f4543dfc24746f6e5c7ba6f94105d51f2",
+    urls = ["https://github.com/godot-gdunit-labs/gdUnit4/archive/0127a55f4543dfc24746f6e5c7ba6f94105d51f2.tar.gz"],
+)

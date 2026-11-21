@@ -1,5 +1,5 @@
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
 load("@autoload_rules_godot//godot:defs.bzl", "godot_project", "godot_resources")
-load("@autoload_rules_godot//godot/gdunit:defs.bzl", "godot_gdunit_test")
 
 # A second project that uses the shared add-on, with a GdUnit suite of its own.
 godot_resources(
@@ -23,11 +23,11 @@ godot_resources(
     ],
     deps = [
         ":main",
-        "@gdunit4",
+        "@autoload_gdunit//:gdunit",
     ],
 )
 
-godot_gdunit_test(
+gdunit_test(
     name = "consumer_uses_shared_counter_test",
     size = "small",
     project = ":consumer_uses_shared_counter_test_project",

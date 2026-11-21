@@ -9,7 +9,7 @@ from tools.conventions.test_support import Record, RepositoryTest
 
 class TestOnlyOperationsTest(RepositoryTest):
     def test_true_defaults_satisfy_the_rule_without_a_literal_attribute(self) -> None:
-        for operation in ("godot_test", "godot_gdunit_test"):
+        for operation in ("godot_test", "gdunit_test"):
             call = Call(Location("BUILD.bazel", 1), operation, frozenset({"name"}))
             records: list[Record] = [
                 {
@@ -29,19 +29,19 @@ class TestOnlyOperationsTest(RepositoryTest):
             {
                 "name": "//:tests",
                 "path": "BUILD.bazel",
-                "strings": {"generator_function": "godot_gdunit_test"},
+                "strings": {"generator_function": "gdunit_test"},
                 "booleans": {"testonly": True},
             },
             {
                 "name": "//:tests.case_list",
                 "path": "BUILD.bazel",
-                "strings": {"generator_function": "godot_gdunit_test"},
+                "strings": {"generator_function": "gdunit_test"},
                 "booleans": {"testonly": False},
             },
             {
                 "name": "//:tests.view",
                 "path": "BUILD.bazel",
-                "strings": {"generator_function": "godot_gdunit_test"},
+                "strings": {"generator_function": "gdunit_test"},
                 "booleans": {"testonly": False},
             },
         ]

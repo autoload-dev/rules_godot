@@ -1,0 +1,5 @@
+# The settings all add-on modules' examples share: platforms, toolchains and the rules of
+# this repository.
+import %workspace%/../../examples.bazelrc
+
+build:buildbuddy --build_metadata=TAGS=autoload_gdunit_examples

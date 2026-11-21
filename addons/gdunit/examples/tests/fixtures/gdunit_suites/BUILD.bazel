@@ -1,0 +1,108 @@
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
+load("@autoload_rules_godot//godot:defs.bzl", "godot_pack", "godot_project", "godot_resources")
+
+# GdUnit suites that pass, fail, run no test or leave an orphan node, with launchers for the
+# suites that must not simply pass.
+package(
+    default_testonly = True,
+    default_visibility = ["//tests:__subpackages__"],
+)
+
+exports_files(["project.godot"])
+
+godot_project(
+    name = "project",
+    project_file = "project.godot",
+)
+
+genrule(
+    name = "generated_suite",
+    srcs = ["passing/GeneratedTest.gd.tpl"],
+    outs = ["passing/GeneratedTest.gd"],
+    cmd = "cp $< $@",
+    tags = ["manual"],
+)
+
+# Three passing suites, one of them generated, whose path order is GeneratedTest,
+# PassingTest, suites/StringTest, listed with a sidecar and a helper script that are
+# no suites.
+godot_resources(
+    name = "passing_suites",
+    srcs = [
+        "passing/PassingTest.gd",
+        "passing/PassingTest.gd.uid",
+        "passing/suites/StringTest.gd",
+        "passing/support/Totals.gd",
+        ":generated_suite",
+    ],
+    tags = ["manual"],
+    deps = ["@autoload_gdunit//:gdunit"],
+)
+
+godot_resources(
+    name = "failing_suite_files",
+    srcs = ["failing/FailingTest.gd"],
+    tags = ["manual"],
+    deps = ["@autoload_gdunit//:gdunit"],
+)
+
+gdunit_test(
+    name = "failing_suite",
+    size = "small",
+    project = ":project",
+    suites = [":failing_suite_files"],
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "empty_suite_files",
+    srcs = ["empty/EmptyTest.gd"],
+    tags = ["manual"],
+    deps = ["@autoload_gdunit//:gdunit"],
+)
+
+gdunit_test(
+    name = "empty_suite",
+    size = "small",
+    project = ":project",
+    suites = [":empty_suite_files"],
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "skipped_suite_files",
+    srcs = ["skipped/SkippedTest.gd"],
+    tags = ["manual"],
+    deps = ["@autoload_gdunit//:gdunit"],
+)
+
+gdunit_test(
+    name = "skipped_suite",
+    size = "small",
+    project = ":project",
+    suites = [":skipped_suite_files"],
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "orphan_suite_files",
+    srcs = ["orphan/OrphanTest.gd"],
+    tags = ["manual"],
+    deps = ["@autoload_gdunit//:gdunit"],
+)
+
+gdunit_test(
+    name = "orphan_suite",
+    size = "small",
+    project = ":project",
+    suites = [":orphan_suite_files"],
+    tags = ["manual"],
+)
+
+# GdUnit4 itself packed, as a game that ships its suites would pack it.
+godot_pack(
+    name = "gdunit4_pack",
+    project = ":project",
+    tags = ["manual"],
+    deps = ["@autoload_gdunit//:gdunit"],
+)

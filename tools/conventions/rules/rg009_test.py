@@ -49,6 +49,15 @@ class TypedRootLayoutTest(RepositoryTest):
             )
         )
 
+    def test_an_add_on_modules_test_fixtures_may_live_in_its_tests(self) -> None:
+        findings = self.evaluate(
+            "addons/runner/MODULE.bazel",
+            "addons/runner/examples/MODULE.bazel",
+            "addons/runner/examples/tests/fixtures/suites/project.godot",
+            "addons/runner/examples/fixtures/project.godot",
+        )
+        self.assertEqual(len(findings), 1)
+
     def test_a_nested_module_is_not_an_exemption_for_project_placement(self) -> None:
         self.assertEqual(
             len(

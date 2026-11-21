@@ -1,0 +1,27 @@
+# GdUnit4's sources at a commit: the files of its add-on directory, which
+# @autoload_gdunit//:gdunit assembles into the add-on.
+package(default_visibility = ["@autoload_gdunit//:__pkg__"])
+
+# The editor plugin and the scenes it docks. Godot instantiates scenes while packing, these
+# create GdUnit's singletons, and the export then crashes at exit. GdUnit's runtime classes
+# use other classes of its UI directory, which stay in the runtime part.
+_EDITOR = [
+    "addons/gdUnit4/plugin.cfg",
+    "addons/gdUnit4/plugin.gd",
+    "addons/gdUnit4/src/network/GdUnitServer.tscn",
+    "addons/gdUnit4/src/ui/GdUnitConsole.tscn",
+    "addons/gdUnit4/src/ui/GdUnitInspector.tscn",
+]
+
+filegroup(
+    name = "runtime",
+    srcs = glob(
+        ["addons/gdUnit4/**"],
+        exclude = _EDITOR + ["addons/gdUnit4/test/**"],
+    ),
+)
+
+filegroup(
+    name = "editor",
+    srcs = _EDITOR,
+)

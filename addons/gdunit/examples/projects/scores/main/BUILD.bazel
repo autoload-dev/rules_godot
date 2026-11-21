@@ -1,0 +1,8 @@
+load("@autoload_rules_godot//godot:defs.bzl", "godot_resources")
+
+# The game's code under test.
+godot_resources(
+    name = "main",
+    srcs = ["scoreboard.gd"],
+    visibility = ["//projects/scores:__subpackages__"],
+)

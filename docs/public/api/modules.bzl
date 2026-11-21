@@ -30,13 +30,6 @@ PUBLIC_APIS = {
             "godot_metadata_sync",
         ],
     },
-    "//godot/gdunit:defs.bzl": {
-        "group": "Projects and resources",
-        "purpose": "Run GdUnit4 suites as a Bazel test with sharding, test filters and JUnit reports.",
-        "symbols": [
-            "godot_gdunit_test",
-        ],
-    },
     "//godot/extension:defs.bzl": {
         "group": "Extensions",
         "purpose": "Build and package extensions and their extension libraries.",
@@ -83,6 +76,7 @@ CROSS_REPOSITORY_MODULES = {
     "//godot/engine/private:generator.bzl": "Implementation loaded by generated engine BUILD files; requires cross-repository load access.",
     "//godot/engine/private:pin.bzl": "Recipe pin rules loaded by generated engine and hub BUILD files; requires cross-repository load access.",
     "//godot/extension/private:bindings.bzl": "Implementation loaded by generated godot-cpp BUILD files; requires cross-repository load access.",
+    "//godot/private:adapter.bzl": "Test adapter macro of test framework modules such as autoload_gdunit, which load it across repositories; not supported API.",
     "//godot/private/testing:android_bundle_test.bzl": "Artifact test rule of the ruleset's tests module, which loads it across repositories; not supported API.",
     "//godot/private/testing:ios_app_test.bzl": "Artifact test rule of the ruleset's tests module, which loads it across repositories; not supported API.",
     "//godot/platforms/private:android.bzl": "godot_android_runtime, loaded by generated engine hub BUILD files; requires cross-repository load access.",
@@ -117,7 +111,6 @@ SUPPORT_MODULES = [
     "//godot/private/config:settings.bzl",
     "//godot/private/config:transitions.bzl",
     "//godot/private:actions.bzl",
-    "//godot/private:adapter.bzl",
     "//godot/private:addon.bzl",
     "//godot/private:analysis.bzl",
     "//godot/private:configuration.bzl",
@@ -126,7 +119,6 @@ SUPPORT_MODULES = [
     "//godot/private:execution.bzl",
     "//godot/private:export_options.bzl",
     "//godot/private:flags.bzl",
-    "//godot/private:gdunit.bzl",
     "//godot/private:graph.bzl",
     "//godot/private:shell_assets.bzl",
     "//godot/private:macros.bzl",

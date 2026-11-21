@@ -5,7 +5,8 @@ from collections.abc import Iterable
 from tools.conventions.context import Context
 from tools.conventions.framework import Finding, RuleInfo
 
-OPERATIONS = frozenset({"godot_test", "godot_gdunit_test"})
+# gdunit_test is autoload_gdunit's test operation.
+OPERATIONS = frozenset({"godot_test", "gdunit_test"})
 
 
 class TestOnlyOperations:

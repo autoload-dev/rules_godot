@@ -9,6 +9,13 @@ local_path_override(
     path = "..",
 )
 
+# GdUnit4 and gdunit_test for the GdUnit suites, from the add-on module of this repository.
+bazel_dep(name = "autoload_gdunit", version = "0.1.0")
+local_path_override(
+    module_name = "autoload_gdunit",
+    path = "../addons/gdunit",
+)
+
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.27")
 bazel_dep(name = "rules_python", version = "2.4.5")
@@ -231,20 +238,6 @@ http_file(
     downloaded_file_path = "bundletool-all.jar",
     sha256 = "a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29",
     urls = ["https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar"],
-)
-
-http_archive = use_repo_rule(
-    "@bazel_tools//tools/build_defs/repo:http.bzl",
-    "http_archive",
-)
-
-# GdUnit4 for the shared add-on's suites, declared in gdunit4.BUILD.bazel.
-http_archive(
-    name = "gdunit4",
-    build_file = "//:gdunit4.BUILD.bazel",
-    sha256 = "3b112b67f7cb85e59f3814ea81473e64b9ddfad351073ce89d496da749a6d1fe",
-    strip_prefix = "gdUnit4-0127a55f4543dfc24746f6e5c7ba6f94105d51f2",
-    urls = ["https://github.com/godot-gdunit-labs/gdUnit4/archive/0127a55f4543dfc24746f6e5c7ba6f94105d51f2.tar.gz"],
 )
 
 godot_cpp_bindings = use_repo_rule(

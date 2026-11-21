@@ -451,21 +451,6 @@ repository_fixtures = use_extension(
 )
 use_repo(repository_fixtures, "godot_split_templates")
 
-http_archive = use_repo_rule(
-    "@bazel_tools//tools/build_defs/repo:http.bzl",
-    "http_archive",
-)
-
-# GdUnit4 for the run tests of the GdUnit adapter.
-http_archive(
-    name = "gdunit4",
-    build_file = "//godot/private/tests:gdunit4.BUILD.bazel",
-    dev_dependency = True,
-    sha256 = "3b112b67f7cb85e59f3814ea81473e64b9ddfad351073ce89d496da749a6d1fe",
-    strip_prefix = "gdUnit4-0127a55f4543dfc24746f6e5c7ba6f94105d51f2",
-    urls = ["https://github.com/godot-gdunit-labs/gdUnit4/archive/0127a55f4543dfc24746f6e5c7ba6f94105d51f2.tar.gz"],
-)
-
 # A vendor release in a repository of its own, for the tests that place another
 # repository's files.
 local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")

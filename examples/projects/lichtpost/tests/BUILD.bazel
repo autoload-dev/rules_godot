@@ -1,5 +1,5 @@
+load("@autoload_gdunit//:defs.bzl", "gdunit_test")
 load("@autoload_rules_godot//godot:defs.bzl", "godot_resources", "godot_test")
-load("@autoload_rules_godot//godot/gdunit:defs.bzl", "godot_gdunit_test")
 
 package(default_testonly = True)
 
@@ -37,7 +37,7 @@ godot_resources(
         ":helpers",
         ":replays",
         "//projects/lichtpost/main",
-        "@gdunit4",
+        "@autoload_gdunit//:gdunit",
     ],
 )
 
@@ -53,7 +53,7 @@ godot_resources(
     prefix = "tests",
 )
 
-godot_gdunit_test(
+gdunit_test(
     name = "tests",
     size = "small",
     project = "//projects/lichtpost:lichtpost",
