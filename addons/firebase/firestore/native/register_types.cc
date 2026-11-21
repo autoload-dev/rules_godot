@@ -1,3 +1,4 @@
+#include "firebase/firestore/native/backend.h"
 #include "firebase/firestore/native/firestore.h"
 #include "firebase/firestore/native/firestore_task.h"
 #include <godot_cpp/core/class_db.hpp>
@@ -10,7 +11,9 @@ static void initialize(ModuleInitializationLevel level) {
   ClassDB::register_class<FirestoreTask>();
   ClassDB::register_class<FirebaseFirestore>();
 }
-static void uninitialize(ModuleInitializationLevel) {}
+static void uninitialize(ModuleInitializationLevel level) {
+  if (level == MODULE_INITIALIZATION_LEVEL_SCENE) firebase_firestore::backend_shutdown();
+}
 
 extern "C" GDExtensionBool GDE_EXPORT firebase_firestore_init(
     GDExtensionInterfaceGetProcAddress get_proc_address, GDExtensionClassLibraryPtr library,

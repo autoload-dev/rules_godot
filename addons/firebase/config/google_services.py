@@ -15,6 +15,9 @@ from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
 
+# The values without which FirebaseApp.configure() raises on iOS.
+REQUIRED_PLIST_KEYS = ("GOOGLE_APP_ID", "GCM_SENDER_ID")
+
 # client_type of the OAuth client the plugin writes as default_web_client_id.
 WEB_CLIENT_TYPE = 3
 
@@ -66,18 +69,20 @@ def android_values(config: dict[str, Any], application_id: str) -> dict[str, str
     return values
 
 
-def _package_name(client: dict[str, Any]) -> str:
+def _package_name(client: dict[str, Any]) -> str | None:
     return (
-        client.get("client_info", {})
-        .get("android_client_info", {})
-        .get("package_name", "?")
+        client.get("client_info", {}).get("android_client_info", {}).get("package_name")
     )
 
 
 def _client(config: dict[str, Any], application_id: str) -> dict[str, Any]:
     clients = config.get("client", [])
     # The first client of a package wins, as in the Gradle plugin.
-    by_package = {_package_name(client): client for client in reversed(clients)}
+    by_package = {
+        package: client
+        for client in reversed(clients)
+        if (package := _package_name(client)) is not None
+    }
     if application_id in by_package:
         return by_package[application_id]
     clients_text = ", ".join(sorted(by_package)) or "no Android clients"
@@ -133,7 +138,7 @@ def check_ios_plist(plist: dict[str, Any], application_id: str) -> None:
     Check that ``plist`` belongs to ``application_id``.
 
     Raises:
-        ConfigError: When the bundle identifier or the app ID is missing or different.
+        ConfigError: When the bundle identifier is different or a required value is missing.
     """
     bundle_id = plist.get("BUNDLE_ID")
     if bundle_id != application_id:
@@ -141,8 +146,9 @@ def check_ios_plist(plist: dict[str, Any], application_id: str) -> None:
             f"{PLIST_NAME} is for bundle identifier {bundle_id!r}, not {application_id!r}; "
             "download the file of the app registered with this identifier."
         )
-    if not plist.get("GOOGLE_APP_ID"):
-        raise ConfigError(f"{PLIST_NAME} has no GOOGLE_APP_ID")
+    for key in REQUIRED_PLIST_KEYS:
+        if not plist.get(key):
+            raise ConfigError(f"{PLIST_NAME} has no {key}")
 
 
 def main(argv: list[str] | None = None) -> int:

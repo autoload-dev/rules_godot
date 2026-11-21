@@ -31,7 +31,8 @@ func _on_log_event_pressed() -> void:
 	%Status.text = "Logged demo_button #%d." % _count
 
 
-## Every add-on loads and does nothing: calls succeed quietly, Firestore tasks fail.
+## Every add-on loads and does nothing: calls succeed quietly, Firestore tasks fail, malformed
+## ones with their own error.
 func _check_unsupported() -> void:
 	if Firebase.is_initialized or FirebaseCore.is_supported() or FirebaseAnalytics.is_supported():
 		push_error("Firebase reports support on %s." % OS.get_name())
@@ -40,4 +41,9 @@ func _check_unsupported() -> void:
 	await task.completed
 	if not task.done or task.error.is_empty():
 		push_error("The Firestore task did not fail: %s" % task.error)
+	# Malformed arguments fail on every platform, before the backend sees them.
+	var query := FirebaseFirestore.query("demo", [["platform", "in", "macOS"]])
+	await query.completed
+	if not "list of values" in query.error:
+		push_error("The malformed query did not fail: %s" % query.error)
 	print("Firebase does nothing on %s; Firestore: %s" % [OS.get_name(), task.error])

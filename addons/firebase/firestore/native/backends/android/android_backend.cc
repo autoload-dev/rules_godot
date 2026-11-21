@@ -41,12 +41,14 @@ Object *plugin() {
 }
 
 // Shared by every instantiation of `start`, so request IDs are unique across operations.
-int64_t next_id = 0;
+// Java takes them as int, so they stay positive 32-bit numbers.
+int32_t next_id = 0;
 
 // Registers the task under a new request ID and starts `method` with it.
 template <typename... Args>
 void start(const Ref<FirestoreTask> &task, const char *method, const Args &...args) {
-  const int64_t id = ++next_id;
+  next_id = next_id == INT32_MAX ? 1 : next_id + 1;
+  const int64_t id = next_id;
   pending()[id] = task;
   plugin()->call(method, id, args...);
 }
@@ -80,4 +82,7 @@ void backend_query(const QuerySpec &query, Ref<FirestoreTask> task) {
   spec["limit"] = query.limit;
   start(task, "query", query.collection_path, spec);
 }
+
+// Pending tasks are Godot objects: release them while Godot still runs.
+void backend_shutdown() { pending().clear(); }
 } // namespace firebase_firestore

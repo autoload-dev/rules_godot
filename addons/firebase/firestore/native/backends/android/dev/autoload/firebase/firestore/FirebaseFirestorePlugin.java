@@ -67,10 +67,12 @@ public final class FirebaseFirestorePlugin extends GodotPlugin {
 
     @UsedByGodot
     public void set_document(int id, String path, Dictionary data, boolean merge) {
-        Map<String, Object> fields = toFirestoreMap(data);
-        run(id, db -> merge
-                ? db.document(path).set(fields, SetOptions.merge())
-                : db.document(path).set(fields), ignored -> null);
+        run(id, db -> {
+            Map<String, Object> fields = toFirestoreMap(data);
+            return merge
+                    ? db.document(path).set(fields, SetOptions.merge())
+                    : db.document(path).set(fields);
+        }, ignored -> null);
     }
 
     @UsedByGodot

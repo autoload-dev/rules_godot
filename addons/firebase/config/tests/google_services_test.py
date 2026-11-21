@@ -48,6 +48,15 @@ class AndroidValuesTest(unittest.TestCase):
         ):
             google_services.android_values(_config(), "org.example.other")
 
+    def test_lists_only_clients_with_a_package_name(self) -> None:
+        config = _config()
+        config["client"].append({"client_info": {"mobilesdk_app_id": "1:2:android:3"}})
+        with self.assertRaisesRegex(
+            google_services.ConfigError,
+            r"it has org\.example\.game, org\.example\.game\.dev\.",
+        ):
+            google_services.android_values(config, "org.example.other")
+
     def test_requires_the_project_number(self) -> None:
         config = _config()
         del config["project_info"]["project_number"]
@@ -91,6 +100,11 @@ class IosPlistTest(unittest.TestCase):
 
     def test_copies_the_plist_of_the_bundle_identifier(self) -> None:
         self.assertEqual(self._run("org.example.game"), (0, True))
+
+    def test_requires_the_sender_id(self) -> None:
+        plist = {"BUNDLE_ID": "org.example.game", "GOOGLE_APP_ID": "1:2:ios:3"}
+        with self.assertRaisesRegex(google_services.ConfigError, "GCM_SENDER_ID"):
+            google_services.check_ios_plist(plist, "org.example.game")
 
     def test_rejects_another_bundle_identifier(self) -> None:
         self.assertEqual(self._run("org.example.other"), (1, False))

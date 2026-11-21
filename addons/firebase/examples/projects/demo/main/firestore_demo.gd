@@ -17,7 +17,10 @@ func _ready() -> void:
 		return
 	var emulator: String = ProjectSettings.get_setting("examples/firestore_emulator", "")
 	if not emulator.is_empty():
-		FirebaseFirestore.use_emulator(emulator.get_slice(":", 0), emulator.get_slice(":", 1).to_int())
+		if ":" in emulator:
+			FirebaseFirestore.use_emulator(emulator.get_slice(":", 0), emulator.get_slice(":", 1).to_int())
+		else:
+			FirebaseFirestore.use_emulator(emulator)
 		%FirestoreStatus.text = "Firestore emulator at %s." % emulator
 	%WriteDocument.pressed.connect(_on_write_pressed)
 	%ReadDocument.pressed.connect(_on_read_pressed)

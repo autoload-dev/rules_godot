@@ -5,9 +5,10 @@
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/string.hpp>
 
-// The platform's side of FirebaseFirestore; each backend defines these once. Paths are
-// validated before they reach a backend. Every operation completes its task exactly once.
-// Tasks pass by value: Objective-C blocks capture C++ references by reference.
+// The platform's side of FirebaseFirestore; each backend defines these once. Paths and
+// filters are validated before they reach a backend, and values hold only null, booleans,
+// integers, floats, strings, byte arrays, arrays and dictionaries with string keys. Every operation completes its task exactly once. Tasks
+// pass by value: Objective-C blocks capture C++ references by reference.
 namespace firebase_firestore {
 bool backend_is_supported();
 void backend_use_emulator(const godot::String &host, int64_t port);
@@ -25,4 +26,6 @@ struct QuerySpec {
   int64_t limit = 0;
 };
 void backend_query(const QuerySpec &query, godot::Ref<FirestoreTask> task);
+// Drops what the backend holds on to before the extension unloads.
+void backend_shutdown();
 } // namespace firebase_firestore

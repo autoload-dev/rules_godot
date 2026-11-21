@@ -12,7 +12,13 @@ bool backend_initialize() {
   if ([[NSBundle mainBundle] pathForResource:@"GoogleService-Info" ofType:@"plist"] == nil) {
     return false;
   }
-  [FIRApp configure];
+  // It also raises one for an incomplete plist, such as one without GCM_SENDER_ID.
+  @try {
+    [FIRApp configure];
+  } @catch (NSException *exception) {
+    NSLog(@"Firebase: the default app is not configured: %@", exception.reason);
+    return false;
+  }
   return [FIRApp defaultApp] != nil;
 }
 

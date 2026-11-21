@@ -4,7 +4,6 @@
 #import <FirebaseCore/FirebaseCore.h>
 #import <FirebaseFirestore/FirebaseFirestore.h>
 #include <godot_cpp/variant/packed_byte_array.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
 
@@ -35,19 +34,15 @@ NSData *to_firestore_blob(const PackedByteArray &bytes) {
   return [NSData dataWithBytes:bytes.ptr() length:bytes.size()];
 }
 
-// Scalars as Firestore takes them; packed arrays other than bytes become lists, other values
-// their text.
+// Scalars as Firestore takes them; FirebaseFirestore left only null, booleans, integers,
+// floats and strings.
 id to_firestore_scalar(const Variant &value) {
   switch (value.get_type()) {
   case Variant::NIL: return [NSNull null];
   case Variant::BOOL: return @((bool)value);
   case Variant::INT: return @((int64_t)value);
   case Variant::FLOAT: return @((double)value);
-  default:
-    if (value.get_type() >= Variant::PACKED_INT32_ARRAY) {
-      return to_firestore_array(UtilityFunctions::type_convert(value, Variant::ARRAY));
-    }
-    return ns(value.stringify());
+  default: return ns(value.stringify());
   }
 }
 
@@ -260,4 +255,6 @@ void backend_query(const QuerySpec &spec, Ref<FirestoreTask> task) {
     [query getDocumentsWithCompletion:completion(task, &documents)];
   });
 }
+// The SDK's completion blocks hold the tasks they complete; nothing else is kept.
+void backend_shutdown() {}
 } // namespace firebase_firestore
