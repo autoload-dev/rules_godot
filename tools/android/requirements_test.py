@@ -20,7 +20,11 @@ class RequirementsTest(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        for name in ("mise.toml", ".bazelignore", "shared.bazelrc", "buildbuddy.bazelrc"):
+        # The settings files the modules' .bazelrc files import, the add-on modules' among them.
+        shared = ["mise.toml", ".bazelignore", "shared.bazelrc", "buildbuddy.bazelrc"]
+        shared += [f"addons/{path.name}" for path in (ROOT / "addons").glob("*.bazelrc")]
+        for name in shared:
+            (self.root / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, self.root / name)
         for module in module_paths(ROOT):
             target = self.root / module
