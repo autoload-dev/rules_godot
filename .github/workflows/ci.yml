@@ -38,6 +38,8 @@ jobs:
       host: ${{ steps.plan.outputs.host }}
       android: ${{ steps.plan.outputs.android }}
       apple: ${{ steps.plan.outputs.apple }}
+      apple_plan: ${{ steps.plan.outputs.apple_plan }}
+      host_android: ${{ steps.plan.outputs.host_android }}
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -109,6 +111,7 @@ jobs:
         uses: ./.github/actions/host-tests
         with:
           tasks: ${{ needs.selection.outputs.host }}
+          android: ${{ needs.selection.outputs.host_android }}
 
   android:
     name: Android
@@ -140,6 +143,9 @@ jobs:
     needs: selection
     if: needs.selection.outputs.apple == 'true'
     uses: ./.github/workflows/apple.yml
+    with:
+      # The Apple lanes of this run's plan: the Apple workflow does not plan again.
+      plan: ${{ needs.selection.outputs.apple_plan }}
 
   verification:
     name: Finalize

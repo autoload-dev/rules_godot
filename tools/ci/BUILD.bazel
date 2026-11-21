@@ -3,6 +3,8 @@ load("@rules_python//python:defs.bzl", "py_library", "py_test")
 py_library(
     name = "verification_lib",
     srcs = ["verification.py"],
+    # The tasks that provision the Android SDK.
+    data = ["//:mise.toml"],
     visibility = ["//tools/docs:__pkg__"],
 )
 

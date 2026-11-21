@@ -2,13 +2,18 @@ name: Apple
 
 # The lanes that need a macOS runner: the host tests on macOS, the apps with
 # source-built engines and the iOS apps. CI calls this workflow from the merge
-# queue and on dispatch. On a pull request, the ci:macos label runs it once, for
-# the commit that is labelled.
+# queue and on dispatch, with its plan. On a pull request, the ci:macos label runs
+# it once, for the commit that is labelled, and it plans itself.
 # Policy: docs/internal/verification-platforms.md#apple-lanes-on-pull-requests.
 on:
   pull_request:
     types: [labeled]
   workflow_call:
+    inputs:
+      plan:
+        description: CI's plan of the Apple lanes, the selection outputs below as JSON.
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -28,23 +33,34 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.label.name == 'ci:macos'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
+    # A call from CI hands over its plan, so only the ci:macos label plans here. Arrays and
+    # booleans of the handed plan become the same JSON text the plan step writes.
     outputs:
-      host: ${{ steps.plan.outputs.host }}
-      source_engine: ${{ steps.plan.outputs['source-engine'] }}
-      ios: ${{ steps.plan.outputs.ios }}
+      host: ${{ inputs.plan && toJSON(fromJSON(inputs.plan).host) || steps.plan.outputs.host }}
+      source_engine: ${{ inputs.plan && toJSON(fromJSON(inputs.plan)['source-engine']) || steps.plan.outputs['source-engine'] }}
+      ios: ${{ inputs.plan && toJSON(fromJSON(inputs.plan).ios) || steps.plan.outputs.ios }}
+      host_android: ${{ inputs.plan && toJSON(fromJSON(inputs.plan).host_android) || steps.plan.outputs.host_android }}
     steps:
       - name: Check out
+        if: ${{ !inputs.plan }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
       - name: Set up selection tools
+        if: ${{ !inputs.plan }}
         uses: ./.github/actions/setup
         with:
           bazel: "false"
       - name: Select verification tasks
         id: plan
+        if: ${{ !inputs.plan }}
         run: python3 tools/ci/verification.py plan apple
+      - name: Use CI's plan
+        if: ${{ inputs.plan }}
+        env:
+          PLAN: ${{ inputs.plan }}
+        run: jq . <<< "$PLAN"
 
   tests-macos:
     name: Tests (macOS)
@@ -61,6 +77,7 @@ jobs:
         uses: ./.github/actions/host-tests
         with:
           tasks: ${{ needs.selection.outputs.host }}
+          android: ${{ needs.selection.outputs.host_android }}
 
   source-engine:
     name: Source engine

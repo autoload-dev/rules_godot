@@ -4,7 +4,10 @@ import argparse
 import json
 import os
 import subprocess
+import tomllib
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
 
 # Every lane; the profile lanes are opt-in through the hk profile of the same name.
 LANES = ("quality", "docs", "host", "source-engine", "android", "ios")
@@ -31,6 +34,10 @@ WORKFLOW_HOSTS = {"ci": "linux", "apple": "macos"}
 # The job with which CI calls the Apple workflow, and CI's selection output that says
 # whether this run calls it.
 APPLE_JOB = "apple"
+# CI's selection output with the Apple workflow's outputs, as JSON, which it hands the
+# Apple workflow; and each workflow's output that says whether its host job needs Android.
+APPLE_PLAN = "apple_plan"
+HOST_ANDROID = "host_android"
 
 
 def runs_apple(lanes: dict[str, list[str]], event_name: str) -> bool:
@@ -216,6 +223,38 @@ def run_tasks(tasks: object) -> None:
         subprocess.run(task_command(task), check=True)
 
 
+def android_tasks(root: Path = ROOT) -> frozenset[str]:
+    """The mise tasks that provision the Android SDK first: those of mise.toml's android template."""
+    tasks = tomllib.loads((root / "mise.toml").read_text())["tasks"]
+    return frozenset(
+        name
+        for name, task in tasks.items()
+        if task.get("extends") == "android" or "android:setup" in task.get("depends", [])
+    )
+
+
+def needs_android(tasks: list[str], android: frozenset[str]) -> bool:
+    """Whether a job's tasks need the Android SDK, so that its setup restores it."""
+    return any(task_command(task)[2] in android for task in tasks)
+
+
+def workflow_outputs(
+    workflow: str, lanes: dict[str, list[str]], event_name: str
+) -> dict[str, object]:
+    """
+    A workflow's selection outputs: each lane's tasks on the workflow's host, and whether its
+    host job needs the Android SDK. CI also says whether it calls the Apple workflow, and
+    hands it the Apple plan, so that the Apple workflow does not plan the run again.
+    """
+    here = for_host(lanes, WORKFLOW_HOSTS[workflow])
+    outputs: dict[str, object] = {lane: here[lane] for lane in WORKFLOW_JOBS[workflow]}
+    outputs[HOST_ANDROID] = needs_android(here["host"], android_tasks())
+    if workflow == "ci":
+        outputs[APPLE_JOB] = runs_apple(lanes, event_name)
+        outputs[APPLE_PLAN] = json.dumps(workflow_outputs("apple", lanes, event_name))
+    return outputs
+
+
 def write_plan(workflow: str) -> None:
     """Write the tasks of each of a workflow's lanes for this run to GITHUB_OUTPUT."""
     event_name = os.environ["GITHUB_EVENT_NAME"]
@@ -226,14 +265,11 @@ def write_plan(workflow: str) -> None:
     command.extend(["check", "--plan", "--json"])
     command.extend(selection_args(event_name, event))
     result = subprocess.run(command, check=True, stdout=subprocess.PIPE, text=True)
-    lanes = lane_plan(json.loads(result.stdout))
-    here = for_host(lanes, WORKFLOW_HOSTS[workflow])
-    outputs: dict[str, object] = {lane: here[lane] for lane in WORKFLOW_JOBS[workflow]}
-    if workflow == "ci":
-        outputs[APPLE_JOB] = runs_apple(lanes, event_name)
+    outputs = workflow_outputs(workflow, lane_plan(json.loads(result.stdout)), event_name)
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
         output.writelines(
-            f"{name}={json.dumps(value)}\n" for name, value in outputs.items()
+            f"{name}={value if isinstance(value, str) else json.dumps(value)}\n"
+            for name, value in outputs.items()
         )
     print(json.dumps(outputs, indent=2))
 

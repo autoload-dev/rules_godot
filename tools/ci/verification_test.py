@@ -1,5 +1,6 @@
 """Regression tests for fail-closed CI selection and the assignment of tasks to lanes."""
 
+import json
 import unittest
 
 from tools.ci.verification import (
@@ -11,6 +12,7 @@ from tools.ci.verification import (
     selection_args,
     task_command,
     verify_results,
+    workflow_outputs,
 )
 
 
@@ -210,6 +212,30 @@ class VerificationTest(unittest.TestCase):
         self.assertTrue(runs_apple(only_macos, "merge_group"))
         only_linux = {lane: [] for lane in LANES} | {"host": ["host:addon:gadget@linux"]}
         self.assertFalse(runs_apple(only_linux, "merge_group"))
+
+    def test_the_plan_says_which_host_jobs_need_the_android_sdk(self) -> None:
+        lanes = {lane: [] for lane in LANES} | {"host": ["host:addon:widget"]}
+        self.assertFalse(workflow_outputs("ci", lanes, "merge_group")["host_android"])
+        lanes["host"].append("test:bazel")
+        self.assertTrue(workflow_outputs("ci", lanes, "merge_group")["host_android"])
+
+    def test_ci_hands_the_apple_workflow_its_plan(self) -> None:
+        lanes = {lane: [] for lane in LANES} | {
+            "host": ["test:bazel", "host:addon:widget@linux"],
+            "ios": ["ios:addon:widget"],
+        }
+        outputs = workflow_outputs("ci", lanes, "merge_group")
+        self.assertEqual(outputs["host"], ["test:bazel", "host:addon:widget@linux"])
+        self.assertTrue(outputs["apple"])
+        self.assertEqual(
+            json.loads(str(outputs["apple_plan"])),
+            {
+                "host": ["test:bazel"],
+                "source-engine": [],
+                "ios": ["ios:addon:widget"],
+                "host_android": True,
+            },
+        )
 
     def test_pr_uses_base_and_checked_out_merge(self) -> None:
         self.assertEqual(

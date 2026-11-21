@@ -71,6 +71,8 @@ runs:
         cache: true
         cache_save_post: true
         cache_key_prefix: mise-${{ github.job }}
+        # A plan job needs only hk and Python, not Bazelisk.
+        install_args: ${{ inputs.bazel == 'false' && 'hk python' || '' }}
         reshim: true
     - name: Record runner tool versions
       if: inputs.bazel == 'true'

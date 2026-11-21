@@ -11,5 +11,8 @@ exports_files([
 
 exports_files(
     ["mise.toml"],
-    visibility = ["//tools/android:__pkg__"],
+    visibility = [
+        "//tools/android:__pkg__",
+        "//tools/ci:__pkg__",
+    ],
 )

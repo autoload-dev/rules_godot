@@ -7,6 +7,9 @@ inputs:
   tasks:
     description: JSON array of the host lane's selected mise tasks.
     required: true
+  android:
+    description: Whether a selected task needs the Android SDK, as the plan's host_android says.
+    default: "true"
 
 runs:
   using: composite
@@ -14,8 +17,9 @@ runs:
     - name: Set up repository
       uses: ./.github/actions/setup
       with:
-        # The ruleset's host set includes its Android packaging tests.
-        android-cache: "true"
+        # The ruleset's host set includes its Android packaging tests; add-on modules'
+        # host lanes need no Android SDK.
+        android-cache: ${{ inputs.android }}
         bazel-modules: |
           .
           examples

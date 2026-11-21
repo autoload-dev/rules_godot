@@ -58,7 +58,11 @@ commands, and [CI](../../.github/workflows/ci.yml), with the [Apple](../../.gith
 workflow it calls, assigns execution environments. The CI planner
 reads hk's JSON plan; it has no separate path policy. It fails on unknown selected steps or
 statuses. A selection failure fails the Finalize job rather than appearing as
-an empty successful plan. Local hooks and CI use complementary code and documentation
+an empty successful plan. The plan decides as much as it can before any job sets up: it
+leaves out a host lane's add-on tasks on a host their `addon.pkl` excludes, so no runner
+starts for them, says whether a host job needs the Android SDK restored, and hands the
+Apple workflow CI's plan, so that it does not plan again. A plan job installs only hk and
+Python. Local hooks and CI use complementary code and documentation
 convention tasks, selected from one rule list in mise. Mixed changes run each rule once;
 documentation-only changes do not load the code rules.
 
