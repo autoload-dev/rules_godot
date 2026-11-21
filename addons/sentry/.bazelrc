@@ -1,0 +1,4 @@
+# The settings all add-on modules share: builds here use the rules of this repository.
+import %workspace%/../module.bazelrc
+
+build:buildbuddy --build_metadata=TAGS=autoload_sentry

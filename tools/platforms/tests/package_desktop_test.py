@@ -151,6 +151,45 @@ class PackageDesktopTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate bundle destination"):
             self.package("linux", "collision", manifest=str(manifest))
 
+    def test_extension_data_keeps_its_mode(self) -> None:
+        handler = self.root / "crash_handler"
+        handler.write_bytes(b"handler")
+        handler.chmod(0o555)
+        notice = self.root / "notice.txt"
+        notice.write_bytes(b"notice")
+        # Bazel marks every output executable: a generated descriptor keeps no mode.
+        descriptor = self.root / "extension.gdextension"
+        descriptor.write_bytes(b"[configuration]\n")
+        descriptor.chmod(0o555)
+        manifest = self.root / "data.json"
+        manifest.write_text(
+            json.dumps(
+                [
+                    {
+                        "source": str(handler),
+                        "destination": "crash_handler",
+                        "keep_mode": True,
+                    },
+                    {
+                        "source": str(notice),
+                        "destination": "notice.txt",
+                        "keep_mode": True,
+                    },
+                    {
+                        "source": str(descriptor),
+                        "destination": "extension.gdextension",
+                    },
+                ]
+            )
+        )
+        args = self.package("linux", "Data.bundle", manifest=str(manifest))
+        with tarfile.open(args.archive) as archive:
+            self.assertEqual(archive.getmember("Data.bundle/crash_handler").mode, 0o755)
+            self.assertEqual(archive.getmember("Data.bundle/notice.txt").mode, 0o644)
+            self.assertEqual(
+                archive.getmember("Data.bundle/extension.gdextension").mode, 0o644
+            )
+
     def test_cpu_error_keeps_extension_context(self) -> None:
         library = self.root / "libwrong.so"
         library.write_bytes(elf(cpu="x86_64"))

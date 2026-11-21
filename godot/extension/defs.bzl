@@ -11,6 +11,7 @@ load("//godot/private:addon.bzl", "extension_addon")
 load("//godot/private:context.bzl", "TRANSITION_ATTRS", "reset_transition")
 load("//godot/private:execution.bzl", "EDITOR_TOOLCHAIN", "RUN_EXEC_GROUPS")
 load("//godot/private:flags.bzl", "FlagInfo")
+load("//godot/private:paths.bzl", "resource_path")
 load("//godot/private:providers.bzl", "GodotExtensionInfo")
 load("//godot/private:symbols.bzl", "keep_debug_info", "linked_dsym")
 load("//godot/private:variant.bzl", "VARIANT_ATTRS", "variant")
@@ -283,13 +284,18 @@ def _placement(ctx, context, prefix):
 
 def _place(placement, name, file):
     """Place file under name beside the extension library and return its resource path."""
-    path = placement.directory + name
-    if path in placement.resource_paths:
+    if placement.directory + name in placement.resource_paths:
         fail("%s: two runtime files of %s are named %s; extension libraries load their dependencies by name from beside them" % (
             placement.label,
             placement.context,
             name,
         ))
+    return _place_at(placement, placement.directory + name, file)
+
+def _place_at(placement, path, file):
+    """Place file at the resource path path and return it."""
+    if path in placement.resource_paths:
+        fail("%s: two runtime files of %s lie at res://%s" % (placement.label, placement.context, path))
     placement.resource_paths[path] = file
     return path
 
@@ -322,8 +328,20 @@ def _is_android_library(file):
     """Whether Android's package manager extracts file: only lib/<abi>/lib*.so."""
     return file.basename.startswith("lib") and _is_shared_library(file, ["so"], versioned = False)
 
-def _place_data(ctx, context, placement):
-    """Place the files of data beside the library and return their resource paths."""
+def _place_data(ctx, context, placement, prefix):
+    """
+    Place the files of data as Godot's [dependencies] and return their resource paths.
+
+    Shared libraries lie beside the library, which loads them by name. Other files, such
+    as a crash handler executable, lie at their path below the descriptor's directory,
+    relative to the package of the target that lists them, as a vendor's add-on lays them
+    out: code that finds them through res:// finds them there in runs and the editor.
+    Desktop applications place those beside the executable, as Godot's export does.
+
+    Returns:
+        A struct of paths (all resource paths) and beside_executable (those of the files
+        that are not shared libraries).
+    """
     if context.operating_system == "ios" and ctx.files.data:
         fail((
             "%s: iOS applications deliver no files beside an extension library, so %s in " +
@@ -331,15 +349,27 @@ def _place_data(ctx, context, placement):
             "as in an objc_library's data, or a framework the library loads as a " +
             "bundle_only import there"
         ) % (ctx.label, sorted([file.short_path for file in ctx.files.data])))
-    dependency_paths = []
-    for file in ctx.files.data:
-        if context.operating_system == "android" and not _is_android_library(file):
-            fail("%s: Android applications deliver only shared libraries named lib*.so beside an extension library; %s is not one" % (
-                ctx.label,
-                file.short_path,
-            ))
-        dependency_paths.append(_place(placement, file.basename, file))
-    return dependency_paths
+    paths = []
+    beside_executable = []
+    for target in ctx.attr.data:
+        for file in target[DefaultInfo].files.to_list():
+            if _is_data_library(ctx, context, file):
+                paths.append(_place(placement, file.basename, file))
+                continue
+            path = _place_at(placement, resource_path(file, target.label, "", prefix), file)
+            paths.append(path)
+            beside_executable.append(path)
+    return struct(paths = paths, beside_executable = beside_executable)
+
+def _is_data_library(ctx, context, file):
+    """Whether a file of data is a shared library the configuration loads; Android takes only those."""
+    if context.operating_system == "android" and not _is_android_library(file):
+        fail("%s: Android applications deliver only shared libraries named lib*.so beside an extension library; %s is not one" % (
+            ctx.label,
+            file.short_path,
+        ))
+    loadable = _LOADABLE[context.operating_system]
+    return _is_shared_library(file, loadable.suffixes, loadable.versioned)
 
 def _configured_library(ctx, target, prefix, context):
     """
@@ -368,7 +398,8 @@ def _configured_library(ctx, target, prefix, context):
         library_file = _archive_file(ctx, context, classified)
         library_path = _place(placement, library_file.basename, library_file)
         dependency_paths = [_place(placement, file.basename, file) for file in _dependency_libraries(target, classified)]
-    dependency_paths += _place_data(ctx, context, placement)
+    data = _place_data(ctx, context, placement, prefix)
+    dependency_paths += data.paths
     return struct(
         library = struct(
             tags = context.tags,
@@ -384,6 +415,7 @@ def _configured_library(ctx, target, prefix, context):
                 for path, file in placement.resource_paths.items()
                 if path != library_path and not path.startswith(library_path + "/")
             },
+            beside_executable = data.beside_executable,
             debug_symbols = linked_dsym(target),
         ),
         resource_paths = placement.resource_paths,
@@ -516,9 +548,13 @@ _OWN_ATTRS = {
     "data": attr.label_list(
         doc = """
         Files the descriptor's [dependencies] lists beyond what the library's providers
-        imply: files the library needs beside it at run time, such as a crash handler
-        executable. Android takes only lib*.so files; iOS takes none and fails, since its
-        applications deliver files through platform libraries in platform_deps.
+        imply, such as a crash handler executable. Shared libraries lie beside the
+        library, which loads them by name. Other files lie at their path relative to the
+        package of the target that lists them, below the descriptor's directory, as a
+        vendor's add-on lays them out; desktop applications place them beside the
+        executable, in Contents/Frameworks on macOS, as Godot's export does. Files keep
+        their executable bit. Android takes only lib*.so files; iOS takes none and fails,
+        since its applications deliver files through platform libraries in platform_deps.
         """,
         allow_files = True,
     ),
@@ -695,7 +731,9 @@ godot_extension = macro(
             ":android_arm64": ":libsentry_android_arm64",
             "@platforms//os:macos": ":libsentry_macos",
         }),
-        # What Sentry's descriptor lists under [dependencies] for Linux.
+        # What Sentry's descriptor lists under [dependencies] for Linux: at
+        # res://addons/sentry/bin/linux/crashpad_handler, beside the executable of an
+        # application.
         data = select({
             ":linux_x86_64": ["bin/linux/crashpad_handler"],
             "//conditions:default": [],

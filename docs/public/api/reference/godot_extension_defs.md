@@ -116,7 +116,9 @@ godot_extension(
         ":android_arm64": ":libsentry_android_arm64",
         "@platforms//os:macos": ":libsentry_macos",
     }),
-    # What Sentry's descriptor lists under [dependencies] for Linux.
+    # What Sentry's descriptor lists under [dependencies] for Linux: at
+    # res://addons/sentry/bin/linux/crashpad_handler, beside the executable of an
+    # application.
     data = select({
         ":linux_x86_64": ["bin/linux/crashpad_handler"],
         "//conditions:default": [],
@@ -134,7 +136,7 @@ godot_extension(
 | Name  | Description | Type | Mandatory | Default |
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="godot_extension-name"></a>name |  A unique name for this macro instance. Normally, this is also the name for the macro's main or only target. The names of any other targets that this macro might create will be this name with a string suffix.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
-| <a id="godot_extension-data"></a>data |  Files the descriptor's [dependencies] lists beyond what the library's providers imply: files the library needs beside it at run time, such as a crash handler executable. Android takes only lib*.so files; iOS takes none and fails, since its applications deliver files through platform libraries in platform_deps.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `None`  |
+| <a id="godot_extension-data"></a>data |  Files the descriptor's [dependencies] lists beyond what the library's providers imply, such as a crash handler executable. Shared libraries lie beside the library, which loads them by name. Other files lie at their path relative to the package of the target that lists them, below the descriptor's directory, as a vendor's add-on lays them out; desktop applications place them beside the executable, in Contents/Frameworks on macOS, as Godot's export does. Files keep their executable bit. Android takes only lib*.so files; iOS takes none and fails, since its applications deliver files through platform libraries in platform_deps.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `None`  |
 | <a id="godot_extension-aspect_hints"></a>aspect_hints |  <a href="https://bazel.build/reference/be/common-definitions#common.aspect_hints">Inherited rule attribute</a>   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `None`  |
 | <a id="godot_extension-compatibility_minimum"></a>compatibility_minimum |  Oldest compatible canonical Godot version written into the descriptor; must be supported by this ruleset.   | String | optional |  `None`  |
 | <a id="godot_extension-compatible_with"></a>compatible_with |  <a href="https://bazel.build/reference/be/common-definitions#common.compatible_with">Inherited rule attribute</a>   | <a href="https://bazel.build/concepts/labels">List of labels</a>; <a href="https://bazel.build/reference/be/common-definitions#configurable-attributes">nonconfigurable</a> | optional |  `None`  |

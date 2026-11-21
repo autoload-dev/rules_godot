@@ -146,19 +146,24 @@ def _shared_library_dependencies_load_from_beside_it(env, target):
 
     # The host's configuration: cc_import needs a C++ toolchain for the target platform.
     directory = _directory(target) + "bin/%s/" % library.tags
+
+    # Data that is no shared library keeps its path below its package, as a vendor's
+    # add-on lays it out; applications place it beside the executable.
+    handler = _directory(target) + "%s_handler_fixture/crash_handler" % target.label.name.removesuffix("_extension")
     env.expect.that_str(library.file.basename).equals("libvendor.so")
-    env.expect.that_collection(sorted(library.runtime_dependencies)).contains_exactly([
-        directory + "crash_handler",
+    env.expect.that_collection(library.runtime_dependencies.keys()).contains_exactly([
+        handler,
         directory + "libdependency.so",
-    ]).in_order()
+    ])
+    env.expect.that_collection(library.beside_executable).contains_exactly([handler])
     env.expect.that_collection(sorted(extension.runtime_resource_paths)).contains_at_least([
-        directory + "crash_handler",
+        handler,
         directory + "libdependency.so",
         directory + "libvendor.so",
     ])
     lines = descriptor_contents(target)[0].split("\n")
     env.expect.that_collection(lines).contains(
-        '%s = {"res://%scrash_handler": "", "res://%slibdependency.so": ""}' % (library.tags, directory, directory),
+        '%s = {"res://%slibdependency.so": "", "res://%s": ""}' % (library.tags, directory, handler),
     )
 
 def _test_linked_shared_library_carries_its_shared_deps(name):

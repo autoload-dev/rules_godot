@@ -168,6 +168,28 @@ class ContextTest(RepositoryTest):
         target = query_targets(self.root, consumer, query_xml(self.root, records))[0]
         self.assertEqual(Location("lib/fixtures/BUILD.bazel", 3), target.origin)
 
+    def test_unresolvable_generator_location_takes_the_rule_location(self) -> None:
+        self.write("consumer/MODULE.bazel", "")
+        self.write("consumer/addon/BUILD.bazel", "")
+        consumer = next(
+            module
+            for module in self.workspace().modules
+            if module.path == Path("consumer")
+        )
+        records: list[Record] = [
+            {
+                "name": "//addon:addon",
+                "path": "consumer/addon/BUILD.bazel",
+                "line": 10,
+                # What Bazel reports for a symbolic macro another module defines.
+                "strings": {
+                    "generator_location": "checkout/consumer/addon/BUILD.bazel:10:12"
+                },
+            }
+        ]
+        target = query_targets(self.root, consumer, query_xml(self.root, records))[0]
+        self.assertEqual(Location("consumer/addon/BUILD.bazel", 10), target.origin)
+
     def test_module_local_labels_include_workspace_modules_only(self) -> None:
         self.write("consumer/MODULE.bazel", "")
         self.write("consumer/BUILD.bazel", "")

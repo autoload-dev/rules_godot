@@ -1,6 +1,6 @@
 """Stable resource paths without leaking Bazel output directory names."""
 
-visibility(["//godot/engine/private", "//godot/platforms/private", "//godot/private/tests"])
+visibility(["//godot/engine/private", "//godot/extension", "//godot/platforms/private", "//godot/private/tests"])
 
 def runfile_key(ctx, file):
     """

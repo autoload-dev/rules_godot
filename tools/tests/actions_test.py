@@ -27,6 +27,8 @@ from tools.godot_export import (
 from tools.godot_staging import (
     IMPORT_ARCHIVE,
     add_resource_path_manifests,
+    copy_file,
+    executable,
     join_action,
     resource_path,
     run_action,
@@ -109,6 +111,23 @@ class ActionTest(unittest.TestCase):
             self.assertEqual(
                 {"y.gdextension": "[configuration]\n"}, contents["extension_descriptors"]
             )
+
+    def test_staged_copies_keep_the_executable_bit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            handler = root / "crash_handler"
+            handler.write_bytes(b"handler")
+            handler.chmod(0o555)
+            notice = root / "notice.txt"
+            notice.write_bytes(b"notice")
+            copy_file(handler, root / "staged/crash_handler")
+            copy_file(notice, root / "staged/notice.txt")
+            self.assertTrue(executable(root / "staged/crash_handler"))
+            self.assertFalse(executable(root / "staged/notice.txt"))
+            member = tarfile.TarInfo("crash_handler")
+            member.mode = 0o755
+            self.assertTrue(executable((root / "unit.tar", member)))
+            self.assertFalse(executable(b"bytes"))
 
     def test_resource_identities_reject_escaping_paths(self) -> None:
         for path in ["../x", "/x", "a/../b", "a//b", "res://x", "a\\b", ""]:

@@ -1,0 +1,14 @@
+load("@autoload_rules_godot//godot:defs.bzl", "godot_resources")
+
+package(default_visibility = ["//projects/demo:__subpackages__"])
+
+godot_resources(
+    name = "main",
+    srcs = [
+        "demo.gd",
+        "demo.gd.uid",
+        "demo.tscn",
+    ],
+    prefix = "main",
+    deps = ["@autoload_sentry//sentry"],
+)

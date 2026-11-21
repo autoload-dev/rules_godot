@@ -1,0 +1,71 @@
+load("@autoload_rules_godot//godot:app.bzl", "godot_app")
+load(
+    "@autoload_rules_godot//godot:defs.bzl",
+    "godot_editor",
+    "godot_metadata_sync",
+    "godot_pack",
+    "godot_project",
+    "godot_run",
+    "godot_test",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["project.godot"])
+
+godot_project(
+    name = "demo",
+    main_scene = "main/demo.tscn",
+    project_file = "project.godot",
+)
+
+godot_pack(
+    name = "pack",
+    project = ":demo",
+    deps = ["//projects/demo/main"],
+)
+
+godot_run(
+    name = "run",
+    headless = False,
+    pack = ":pack",
+)
+
+# Runs the demo headless: any engine error, such as a missing class, fails it.
+godot_test(
+    name = "headless",
+    size = "small",
+    headless = True,
+    pack = ":pack",
+)
+
+godot_editor(
+    name = "edit",
+    project = ":demo",
+    deps = ["//projects/demo/main"],
+)
+
+godot_metadata_sync(
+    name = "update",
+    size = "small",
+    project = ":demo",
+    deps = ["//projects/demo/main"],
+)
+
+godot_app(
+    name = "app",
+    application_id = "dev.autoload.examples.sentry",
+    # A device build needs a provisioning profile for the application id. Put yours at
+    # addons/sentry/examples/signing/sentry.mobileprovision (gitignored) and build with
+    # --define=ios_signing=local, e.g. via `build:ios --define=ios_signing=local` in user.bazelrc.
+    ios_provisioning_profile = select({
+        ":local_ios_signing": "//:provisioning_profile",
+        "//conditions:default": None,
+    }),
+    pack = ":pack",
+)
+
+config_setting(
+    name = "local_ios_signing",
+    define_values = {"ios_signing": "local"},
+)

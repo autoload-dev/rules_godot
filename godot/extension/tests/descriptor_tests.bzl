@@ -24,7 +24,7 @@ reloadable = false
 
 [dependencies]
 
-linux.x86_64.release = {"res://native/bin/linux.x86_64.release/dependency_fixture.txt": ""}
+linux.x86_64.release = {"res://native/dependency_fixture.txt": ""}
 
 [libraries]
 

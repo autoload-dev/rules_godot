@@ -186,11 +186,17 @@ extension places them beside the library and lists them in the descriptor's
 path. Two runtime files of the same name fail analysis.
 
 `data` holds the files of a vendor's `[dependencies]` that the library's providers do not
-already bring, such as a crash handler executable:
+already bring, such as a crash handler executable. They go where the vendor's code finds them
+in Godot's own builds. A shared library lies beside the library, which loads it by name. Any
+other file lies at its path relative to the package of the target that lists it, below the
+descriptor's directory, as the vendor's add-on lays it out, so code that looks for it through
+`res://` finds it in source runs, pack runs and the editor. A desktop application places it
+beside the executable instead, in `Contents/Frameworks` on macOS, as Godot's export puts a
+`[dependencies]` entry. Files keep their executable bit.
 
 | Operating system | `data` takes |
 | --- | --- |
-| Linux, macOS | any file, placed beside the library |
+| Linux, macOS | any file: shared libraries beside the library, other files as described above |
 | Android | `lib*.so` files, packaged in `lib/<abi>/`; anything else fails analysis |
 | iOS | nothing: an application delivers no files beside the library, so a file fails analysis. A file goes to a [platform library](#platform-libraries), a framework the library loads to [`platform_deps`](#dynamic-frameworks) |
 

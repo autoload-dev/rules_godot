@@ -1,0 +1,109 @@
+# Sentry for Godot's release, addons/sentry/ of its zip: its files and imports, which
+# @autoload_sentry//sentry assembles into the add-on. Every library comes in a debug and a
+# release build.
+load("@rules_android//rules:rules.bzl", "aar_import")
+load("@rules_apple//apple:apple.bzl", "apple_dynamic_xcframework_import")
+load("@rules_cc//cc:cc_import.bzl", "cc_import")
+
+package(default_visibility = ["@autoload_sentry//sentry:__pkg__"])
+
+# The GDScript user-feedback UI.
+filegroup(
+    name = "user_feedback",
+    srcs = glob(["user_feedback/**"]),
+)
+
+_VARIANTS = ["debug", "release"]
+
+_ANDROID_ABIS = {
+    "@platforms//cpu:aarch64": "arm64",
+    "@platforms//cpu:armv7": "arm32",
+    "@platforms//cpu:x86_32": "x86_32",
+    "@platforms//cpu:x86_64": "x86_64",
+}
+
+[
+    filegroup(
+        name = "android_" + variant,
+        srcs = select({
+            cpu: ["bin/android/libsentry.android.%s.%s.so" % (variant, abi)]
+            for cpu, abi in _ANDROID_ABIS.items()
+        }),
+    )
+    for variant in _VARIANTS
+]
+
+# Android: the Godot plugin (Kotlin) the extension calls through Engine.get_singleton(),
+# with the Sentry Android SDK that Sentry's export plugin adds to Gradle builds.
+[
+    aar_import(
+        name = "android_plugin_" + variant,
+        aar = "bin/android/sentry_android_godot_plugin.%s.aar" % variant,
+        deps = [
+            "@godot//android:plugin_api",
+            "@maven//:io_sentry_sentry_android",
+            "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        ],
+    )
+    for variant in _VARIANTS
+]
+
+_LINUX_ARCHS = {
+    "@platforms//cpu:aarch64": "arm64",
+    "@platforms//cpu:x86_64": "x86_64",
+}
+
+[
+    filegroup(
+        name = "linux_" + variant,
+        srcs = select({
+            cpu: ["bin/linux/%s/libsentry.linux.%s.%s.so" % (arch, variant, arch)]
+            for cpu, arch in _LINUX_ARCHS.items()
+        }),
+    )
+    for variant in _VARIANTS
+]
+
+# Linux: the Crashpad handler, the executable that writes native crash reports. Sentry starts
+# it at initialization and looks for it beside the executable, then at its path in the
+# release.
+filegroup(
+    name = "linux_crashpad_handler",
+    srcs = select({
+        cpu: ["bin/linux/%s/crashpad_handler" % arch]
+        for cpu, arch in _LINUX_ARCHS.items()
+    }),
+)
+
+# macOS: the extension library loads the Sentry Cocoa SDK, libSentry.dylib, through
+# @loader_path; as a dependency of the import it lands beside the library.
+cc_import(
+    name = "sentry_cocoa_macos",
+    shared_library = "bin/macos/libSentry.dylib",
+)
+
+[
+    cc_import(
+        name = "macos_" + variant,
+        shared_library = "bin/macos/libsentry.macos.%s.dylib" % variant,
+        deps = [":sentry_cocoa_macos"],
+    )
+    for variant in _VARIANTS
+]
+
+# iOS: Godot loads the extension's framework, which loads SentryObjC.framework; neither is
+# linked into the executable, see rules_godot's gdextension.md, "Dynamic frameworks".
+[
+    apple_dynamic_xcframework_import(
+        name = "ios_" + variant,
+        bundle_only = True,
+        xcframework_imports = glob(["bin/ios/libsentry.ios.%s.xcframework/**" % variant]),
+    )
+    for variant in _VARIANTS
+]
+
+apple_dynamic_xcframework_import(
+    name = "sentry_cocoa_ios",
+    bundle_only = True,
+    xcframework_imports = glob(["bin/ios/Sentry.xcframework/**"]),
+)

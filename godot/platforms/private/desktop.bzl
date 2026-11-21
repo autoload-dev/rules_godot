@@ -134,6 +134,31 @@ def _package_binaries(ctx, binaries, linked_dsyms):
     }, macho = macho)
     return struct(packaged = dict(zip(binaries.keys(), files.values())), symbols = symbols)
 
+def _bundle_layout(operating_system):
+    """Where an application bundle holds resource paths and the files beside its executable."""
+    macos = operating_system == "macos"
+    return struct(
+        resources = "Contents/Resources/" if macos else "",
+        beside_executable = "Contents/Frameworks/" if macos else "",
+        placed = {},
+    )
+
+def _extension_copy(layout, owner, destination, source):
+    """
+    The copy of an extension's runtime file that is no native code.
+
+    Data that is no shared library goes where Godot's export puts [dependencies]: beside
+    the executable, in Contents/Frameworks on macOS, keeping its mode. Other files keep
+    their resource path. Two data files of one name fail.
+    """
+    if destination not in owner.beside_executable:
+        return {"source": source.path, "destination": layout.resources + destination}
+    placed = layout.beside_executable + source.basename
+    if placed in layout.placed:
+        fail("%s and %s both place a file at %s beside the executable" % (layout.placed[placed], owner.context, placed))
+    layout.placed[placed] = owner.context
+    return {"source": source.path, "destination": placed, "keep_mode": True}
+
 def _desktop_application_impl(ctx):
     operating_system = ctx.attr._operating_system
     if ctx.attr.platform_deps or ctx.attr.platform_resources:
@@ -170,8 +195,9 @@ def _desktop_application_impl(ctx):
 
     # Destinations are resource paths: extension libraries stay loose files beside the
     # mounted pack. The library and the shared libraries it needs are native code to
-    # package; its descriptor and other runtime files are copied.
-    prefix = "Contents/Resources/" if operating_system == "macos" else ""
+    # package; its descriptor and other runtime files are copied (_extension_copy).
+    layout = _bundle_layout(operating_system)
+    prefix = layout.resources
     for extension in pack.project.runtime_extensions:
         library = extension.library
         context = "res://%s: %s" % (extension.descriptor_path, library.tags)
@@ -188,7 +214,7 @@ def _desktop_application_impl(ctx):
                 binary_contexts[prefix + destination] = context
                 continue
             copied_files.append(source)
-            copies.append({"source": source.path, "destination": prefix + destination})
+            copies.append(_extension_copy(layout, struct(context = context, beside_executable = library.beside_executable), destination, source))
     packaged_binaries = _package_binaries(ctx, binaries, linked_dsyms)
     for destination, source in packaged_binaries.packaged.items():
         if destination == binary_relative:

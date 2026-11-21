@@ -1,0 +1,60 @@
+"""Sentry: Godot add-ons of autoload-dev, consumed by Godot applications through Bazel."""
+
+module(
+    name = "autoload_sentry",
+    version = "0.1.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+# The release of rules_godot the add-ons need. Builds in this repository use the rules beside
+# them instead (addons/module.bazelrc and examples/MODULE.bazel).
+bazel_dep(name = "autoload_rules_godot", version = "0.1.1")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_android", version = "0.8.0")
+bazel_dep(name = "rules_apple", version = "5.3.1")
+bazel_dep(name = "rules_cc", version = "0.2.27")
+bazel_dep(name = "rules_jvm_external", version = "6.10")
+
+# The engine whose Android plugin API Sentry's Godot plugin is imported against. The root
+# module owns the name; identical requests from several modules coalesce.
+godot_engines = use_extension("@autoload_rules_godot//godot:extensions.bzl", "godot_engines")
+godot_engines.prebuilt(
+    name = "godot",
+    version = "4.7.2",
+)
+use_repo(godot_engines, "godot")
+
+# Builds in this directory, such as `bazel test //...`; applications register their own.
+register_toolchains(
+    "@godot//toolchains:all",
+    dev_dependency = True,
+)
+
+# Android: the Sentry Android SDK that Sentry for Godot's export plugin adds to a Gradle
+# build, and the Kotlin runtime its Godot plugin is compiled against. They join the
+# application's @maven graph, which lists autoload_sentry in known_contributing_modules.
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "maven",
+    artifacts = [
+        "io.sentry:sentry-android:8.64.0",
+        "org.jetbrains.kotlin:kotlin-stdlib:2.0.21",
+    ],
+    repositories = [
+        "https://repo.maven.apache.org/maven2",
+        "https://dl.google.com/dl/android/maven2",
+    ],
+)
+use_repo(maven, "maven")
+
+# Sentry for Godot's release: its prebuilt GDExtension libraries, Godot Android plugin, iOS
+# frameworks and GDScript user-feedback UI.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "sentry_godot",
+    build_file = "//third_party:sentry_godot.BUILD.bazel",
+    sha256 = "b639df4d50c4f00f6e57f26fc126640fa4a29a74050970cbfc0ecc85e5d0b460",
+    strip_prefix = "addons/sentry",
+    urls = ["https://github.com/getsentry/sentry-godot/releases/download/2.5.1/sentry-godot-2.5.1%2Bd30e663.zip"],
+)

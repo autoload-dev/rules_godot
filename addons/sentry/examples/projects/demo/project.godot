@@ -1,0 +1,22 @@
+config_version=5
+
+[application]
+config/name="Sentry"
+
+[display]
+window/size/viewport_width=540
+window/size/viewport_height=960
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+
+[sentry]
+
+; A placeholder: replace it with your project's DSN from Sentry's project settings to see
+; the demo's events there.
+options/dsn="https://examplePublicKey@o0.ingest.sentry.io/0"
+options/skip_auto_init_on_editor_play=false
+options/attach_log=false

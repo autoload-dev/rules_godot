@@ -4,6 +4,7 @@ import argparse
 import gzip
 import io
 import json
+import os
 import plistlib
 import shutil
 import stat
@@ -28,6 +29,19 @@ def copy_file(source: str | Path, destination: Path, executable: bool = False) -
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, destination)
     destination.chmod(0o755 if executable else 0o644)
+
+
+def _executable(entry: dict) -> bool:
+    """
+    Whether a manifest entry is installed executable.
+
+    An entry that keeps its mode, such as an extension's crash handler, is executable when
+    its source is. Only those entries ask the source: Bazel marks every output it writes
+    executable, so the mode of other sources, such as generated descriptors, says nothing.
+    """
+    return entry.get("executable", False) or (
+        entry.get("keep_mode", False) and os.access(entry["source"], os.X_OK)
+    )
 
 
 def archive_tree(root: Path, archive: str | Path, operating_system: str) -> None:
@@ -137,7 +151,7 @@ def package(args: argparse.Namespace) -> None:
             install(
                 entry["source"],
                 root / destination,
-                entry.get("executable", False),
+                _executable(entry),
                 entry.get("context"),
             )
     archive_tree(root, args.archive, args.operating_system)

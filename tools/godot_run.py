@@ -446,9 +446,7 @@ def _stage_pack(manifest: dict, root: Path, runfile: Callable[[str], Path]) -> P
     else:
         shutil.copyfile(runfile(manifest["pack"]), pack)
     for path, key in manifest["extension_resource_paths"].items():
-        destination = root / resource_path(path)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(runfile(key), destination)
+        copy_file(runfile(key), root / resource_path(path))
     return pack
 
 

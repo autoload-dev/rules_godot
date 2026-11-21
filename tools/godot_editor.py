@@ -25,6 +25,7 @@ from tools.godot_run import generated_files, report, runfile_locator
 from tools.godot_staging import (
     EXTENSION_LIST,
     Original,
+    executable,
     extension_list,
     open_original,
     same_content,
@@ -191,6 +192,9 @@ def place_file(
         status = path.stat()
         fingerprint = [origin, status.st_size, status.st_mtime_ns]
         if known == fingerprint:
+            # The bytes are placed; the mode can still change, as when an original
+            # becomes executable. chmod keeps the modification time of the fingerprint.
+            path.chmod(mode)
             return fingerprint
         if not same_content(path, original):
             path.unlink()
@@ -273,7 +277,8 @@ def sync(view: Path, workspace: Path, layout: Layout, record: dict) -> dict:
         path: place_file(
             view / path,
             original,
-            0o444 if path in layout.copies else 0o644,
+            (0o444 if path in layout.copies else 0o644)
+            | (0o111 if executable(original) else 0),
             known.get(path),
         )
         for path, original in files.items()

@@ -22,6 +22,10 @@ class RequirementsTest(unittest.TestCase):
         self.root = Path(directory.name)
         for name in ("mise.toml", ".bazelignore", "shared.bazelrc", "buildbuddy.bazelrc"):
             shutil.copyfile(ROOT / name, self.root / name)
+        # The settings the add-on modules' .bazelrc files import.
+        (self.root / "addons").mkdir()
+        for bazelrc in (ROOT / "addons").glob("*.bazelrc"):
+            shutil.copyfile(bazelrc, self.root / "addons" / bazelrc.name)
         for module in module_paths(ROOT):
             target = self.root / module
             target.mkdir(parents=True, exist_ok=True)
