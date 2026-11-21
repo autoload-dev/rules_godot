@@ -57,14 +57,15 @@ public final class FirebaseAnalyticsPlugin extends GodotPlugin {
         }
     }
 
-    /** Strings, integers, floats and booleans, as on iOS; booleans become 0 or 1. */
+    /**
+     * Integers, floats and strings: FirebaseAnalytics.log_event of the extension has turned
+     * every other value into one of them, as for iOS.
+     */
     private static Bundle bundle(Dictionary parameters) {
         Bundle bundle = new Bundle();
         for (Map.Entry<String, Object> entry : parameters.entrySet()) {
             Object value = entry.getValue();
-            if (value instanceof Boolean) {
-                bundle.putLong(entry.getKey(), ((Boolean) value) ? 1 : 0);
-            } else if (value instanceof Integer || value instanceof Long) {
+            if (value instanceof Integer || value instanceof Long) {
                 bundle.putLong(entry.getKey(), ((Number) value).longValue());
             } else if (value instanceof Number) {
                 bundle.putDouble(entry.getKey(), ((Number) value).doubleValue());

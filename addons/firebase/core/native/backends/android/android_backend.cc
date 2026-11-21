@@ -6,10 +6,14 @@ using namespace godot;
 
 namespace firebase_core {
 namespace {
+// The plugin singleton, looked up once it exists.
 Object *plugin() {
+  static Object *singleton = nullptr;
+  if (singleton) return singleton;
   Engine *engine = Engine::get_singleton();
   if (!engine || !engine->has_singleton("FirebaseCoreAndroid")) return nullptr;
-  return engine->get_singleton("FirebaseCoreAndroid");
+  singleton = engine->get_singleton("FirebaseCoreAndroid");
+  return singleton;
 }
 
 bool call_bool(const char *method) {

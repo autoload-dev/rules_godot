@@ -6,10 +6,14 @@ using namespace godot;
 
 namespace firebase_analytics {
 namespace {
+// The plugin singleton, looked up once it exists.
 Object *plugin() {
+  static Object *singleton = nullptr;
+  if (singleton) return singleton;
   Engine *engine = Engine::get_singleton();
   if (!engine || !engine->has_singleton("FirebaseAnalyticsAndroid")) return nullptr;
-  return engine->get_singleton("FirebaseAnalyticsAndroid");
+  singleton = engine->get_singleton("FirebaseAnalyticsAndroid");
+  return singleton;
 }
 } // namespace
 
