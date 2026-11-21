@@ -98,7 +98,8 @@ for document in task.result:  # [{"id": ..., "path": ..., "data": {...}}, ...]
   once (a malformed path, an unsupported platform). Firestore values map to Godot as maps to
   dictionaries, lists to arrays, timestamps to seconds since the epoch, references to paths,
   geo points to dictionaries with latitude and longitude, and blobs to byte arrays; the same
-  mapping applies on Android and iOS.
+  mapping applies on Android and iOS. Written Godot values other than null, booleans,
+  numbers, strings, arrays and dictionaries are stored in their Godot string form.
 - Android dependencies come from Maven: the module's `maven.install(name = "maven")` merges
   into the root module's `@maven`, which pins the merged graph.
 - iOS dependencies come from Firebase's binary distribution, `Firebase.zip`, as static
