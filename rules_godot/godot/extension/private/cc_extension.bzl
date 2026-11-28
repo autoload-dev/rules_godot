@@ -68,7 +68,12 @@ def _cc_extension_impl(
         visibility = visibility,
         target_compatible_with = kwargs.get("target_compatible_with"),
         **tool_view_of(name, dict(
-            library = ":" + library,
+            # No library where godot_extension_library links none, so applications there
+            # report the extension as missing.
+            library = select({
+                Label("@platforms//os:" + operating_system): ":" + library
+                for operating_system in ["android", "ios", "linux", "macos"]
+            } | {"//conditions:default": None}),
             data = data,
             resource_path = resource_path,
             compatibility_minimum = compatibility_minimum,

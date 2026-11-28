@@ -186,12 +186,74 @@ An application fails analysis when an extension it delivers has libraries for it
 operating system, but none that the requested CPU, Android ABI or iOS platform slice loads in the
 selected variant. This includes an extension disabled only for the export, which the
 application still loads at runtime. An extension without any library for the
-operating system, such as a desktop-only one in a mobile app, is left out, and one disabled
-for `runtime` is not delivered.
+operating system, such as a desktop-only one in a mobile app, is a
+[missing extension library](#missing-extension-libraries): the application fails and names
+it, or builds without it.
 
 A pack contains the extension's descriptor but never its libraries; `godot_run` and
 applications deliver or link those from the project. A PCK used elsewhere needs its extension
 libraries delivered separately, see [export membership](resources.md#export-membership).
+
+## Missing extension libraries
+
+An extension has no library on a platform where the branch of its `library` is `None`,
+whether its libraries are prebuilt or built from source. The library and its sources are not
+analyzed there. `godot_cc_extension` has a library on every platform
+`godot_extension_library` links for and none on the others.
+
+```starlark
+godot_extension(
+    name = "platform_paths",
+    library = select({
+        "@platforms//os:android": ":paths_library",
+        "@platforms//os:ios": ":paths_library",
+        "@platforms//os:linux": ":paths_library",
+        "@platforms//os:macos": ":paths_library",
+        # No library elsewhere.
+        "//conditions:default": None,
+    }),
+)
+```
+
+An application whose packs reach such an extension decides what happens with
+`missing_extension_libraries`. By default, `"error"`, analysis fails and names the
+extensions:
+
+```
+//game:app: no extension library for android_arm64 in:
+  //game/save:sqlite
+Build it for a platform these add-ons support, select other add-ons for this platform, or
+pass --@autoload_rules_godot//godot:missing_extension_libraries=report to build without them.
+```
+
+With `"report"` the application builds without those libraries, prints the same list as a
+warning and writes it to `<name>.missing_extension_libraries.txt` in the output group of
+that name. Scripts that use a class of a missing extension fail at run time, and the
+[content validation](development.md#content-validation) of the application's packs reports
+instead of failing where such an extension is absent; it cannot tell those failures from
+others. The flag of the same name overrides the attribute for one invocation:
+
+```starlark
+godot_app(
+    name = "app",
+    pack = ":pack",
+    application_id = "com.example.mygame",
+    missing_extension_libraries = "report",
+)
+```
+
+```sh
+bazel build //path/to:app \
+    --platforms=@autoload_rules_godot//godot/platforms:android_arm64 \
+    --@autoload_rules_godot//godot:missing_extension_libraries=report
+```
+
+Other add-ons for one platform need no new API: a `select()` in the `deps` of the resources
+that use them. An application that is not meant for a platform says so with
+`target_compatible_with`, and a wildcard build for that platform skips it. A `select()`
+without a branch for the platform, such as one with `no_match_error`, stays Bazel's analysis
+error for every target that reaches it. The setting applies to `godot_app`; source runs,
+tests and the editor variant load the extensions of the host.
 
 ## Upgrade the engine without rebuilding the extension
 
@@ -249,7 +311,8 @@ Each configuration writes a descriptor fragment with the one library it built, u
 feature tags of that configuration; a pack merges the fragments of its platform slices.
 A configuration without a matching `select()` branch is Bazel's analysis error, and a
 branch of `None` leaves the extension without a library there, where scripts that use its
-classes fail their [content validation](development.md#content-validation).
+classes fail their [content validation](development.md#content-validation) and applications
+report it as [missing](#missing-extension-libraries).
 
 The library's providers decide how Godot loads it:
 

@@ -176,6 +176,58 @@ def _test_macos_minimum_meeting_extension_requirement_analyzes(name):
         pack = ":demanding_pack",
     )
 
+# An extension without a library for the application's platform: by default the
+# application fails and names it; with report it builds and lists it.
+
+_MISSING = str(Label("//godot:missing_extension_libraries"))
+
+def _test_missing_extension_library_fails(name):
+    _floor_app_test(
+        name,
+        _missing_extension_library_fails,
+        expect_failure = True,
+        pack = ":linux_only_pack",
+    )
+
+def _missing_extension_library_fails(env, target):
+    _expect_failure(env, target, "_app: no extension library for ")
+    _expect_failure(env, target, "//godot/private/config/tests:linux_only_extension")
+    _expect_failure(env, target, "--@autoload_rules_godot//godot:missing_extension_libraries=report")
+
+def _test_missing_extension_library_reported(name):
+    _floor_app_test(
+        name,
+        _missing_extension_library_reported,
+        expect_failure = False,
+        missing_extension_libraries = "report",
+        pack = ":linux_only_pack",
+    )
+
+def _missing_extension_library_reported(env, target):
+    # The public label resolves to the backend, whose name extends the application's.
+    reports = target[OutputGroupInfo].missing_extension_libraries.to_list()
+    env.expect.that_collection([report.basename for report in reports]).contains_exactly([
+        env.ctx.label.name + "_app.missing_extension_libraries.txt",
+    ])
+
+def _test_flag_overrides_missing_extension_libraries(name):
+    _floor_app_test(
+        name + "_report",
+        _missing_extension_library_reported,
+        expect_failure = False,
+        config_settings = _FLOOR_ENGINES | {_MISSING: "report"},
+        pack = ":linux_only_pack",
+    )
+    _floor_app_test(
+        name + "_error",
+        _missing_extension_library_fails,
+        expect_failure = True,
+        config_settings = _FLOOR_ENGINES | {_MISSING: "error"},
+        missing_extension_libraries = "report",
+        pack = ":linux_only_pack",
+    )
+    native.test_suite(name = name, tests = [name + "_report", name + "_error"])
+
 def _test_extension_rejects_unknown_minimum_os_key(name):
     godot_extension(
         name = name + "_extension",
@@ -296,5 +348,8 @@ def app_test_suite(name):
             _test_desktop_app_name_with_separator_fails,
             _test_mobile_platform_without_export_platform_fails,
             _test_desktop_platform_with_unsupported_cpu_fails,
+            _test_missing_extension_library_fails,
+            _test_missing_extension_library_reported,
+            _test_flag_overrides_missing_extension_libraries,
         ],
     )

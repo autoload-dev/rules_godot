@@ -1,12 +1,37 @@
 """The application context of a godot_app, on its dependency to the pack it ships."""
 
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//godot:providers.bzl", "GodotPackInfo")
 load("//godot/private:resources.bzl", "unique_extensions", "unique_platform_libraries")
 load("//godot/private:versions.bzl", "IOS_MINIMUM_OS", "MACOS_MINIMUM_OS", "dotted_version")
-load(":settings.bzl", "APPLICATION_CONTEXT", "MERGE_ANDROID_MANIFEST_PERMISSIONS", "OPERATING_SYSTEM")
+load(":settings.bzl", "APPLICATION_CONTEXT", "EXPORT_PLATFORM", "MERGE_ANDROID_MANIFEST_PERMISSIONS", "OPERATING_SYSTEM")
 load(":transitions.bzl", "project_transition")
 
 visibility(["//godot/..."])
+
+MISSING_EXTENSION_LIBRARIES = str(Label("//godot:missing_extension_libraries"))
+
+GodotMissingExtensionLibrariesInfo = provider(
+    doc = "What an application lacks in its platform slice: the extensions its packs reach that have no library there.",
+    fields = {
+        "report": "File listing them, written where the application builds without them; None otherwise",
+    },
+)
+
+def missing_extension_libraries_report(pack):
+    """
+    Return the depset of an application pack's report of missing extension libraries.
+
+    Args:
+        pack: The application pack target, or the list a transitioned attribute holds.
+    """
+    target = pack[0] if type(pack) == "list" else pack
+    info = target[GodotMissingExtensionLibrariesInfo] if GodotMissingExtensionLibrariesInfo in target else None
+    return depset([info.report] if info and info.report else [])
+
+def _missing_mode(flag, attr):
+    """The application's choice for missing extension libraries: the flag's when given, else its own."""
+    return flag or attr.missing_extension_libraries
 
 def _android_values(attr):
     if attr.android_min_sdk_version < 0 or attr.android_target_sdk_version < 0:
@@ -73,13 +98,57 @@ def application_context(settings, attr):
     return {
         APPLICATION_CONTEXT: json.encode({k: values[k] for k in sorted(values)}),
         MERGE_ANDROID_MANIFEST_PERMISSIONS: False,
+        # The packs of an application that builds without missing libraries validate their
+        # content as it does; others keep the build's value, and so its configuration.
+        MISSING_EXTENSION_LIBRARIES: "report" if _missing_mode(settings[MISSING_EXTENSION_LIBRARIES], attr) == "report" else settings[MISSING_EXTENSION_LIBRARIES],
     }
 
 _application_transition = transition(
     implementation = application_context,
-    inputs = [APPLICATION_CONTEXT, OPERATING_SYSTEM],
-    outputs = [APPLICATION_CONTEXT, MERGE_ANDROID_MANIFEST_PERMISSIONS],
+    inputs = [APPLICATION_CONTEXT, OPERATING_SYSTEM, MISSING_EXTENSION_LIBRARIES],
+    outputs = [APPLICATION_CONTEXT, MERGE_ANDROID_MANIFEST_PERMISSIONS, MISSING_EXTENSION_LIBRARIES],
 )
+
+def _platform_name(ctx, pack):
+    """The export platform's name, or its operating system and CPUs in a build without one."""
+    export_platform = ctx.attr._export_platform[BuildSettingInfo].value
+    return export_platform.rpartition(":")[2] if export_platform else " ".join([pack.operating_system] + pack.cpus)
+
+def _missing_extension_libraries(ctx, pack, extensions):
+    """
+    Fail or report for the extensions the packs reach that have no library in this slice.
+
+    Args:
+        ctx: Context of the application pack.
+        pack: GodotPackInfo of the start pack.
+        extensions: GodotExtensionInfo of every pack's extensions.
+
+    Returns:
+        The report File where the application builds without them, or None.
+    """
+    missing = sorted([extension.label for extension in extensions if not extension.library])
+    if not missing:
+        return None
+    mode = _missing_mode(ctx.attr._missing_extension_libraries[BuildSettingInfo].value, ctx.attr)
+    application = str(ctx.label).removeprefix("@@").removesuffix(".pack")
+    listing = "%s: no extension library for %s in:\n%s" % (
+        application,
+        _platform_name(ctx, pack),
+        "\n".join(["  " + label for label in missing]),
+    )
+    if mode != "report":
+        fail(listing + (
+            "\nBuild it for a platform these add-ons support, select other add-ons for this " +
+            "platform, or pass --@autoload_rules_godot//godot:missing_extension_libraries=report " +
+            "to build without them."
+        ))
+
+    # A warning in the build's output, since the application builds without the libraries.
+    # buildifier: disable=print
+    print("WARNING: %s\nIt builds without them; scripts that use their classes fail at run time." % listing)
+    report = ctx.actions.declare_file(ctx.label.name.removesuffix(".pack") + ".missing_extension_libraries.txt")
+    ctx.actions.write(report, listing + "\n")
+    return report
 
 def _pack_impl(ctx):
     pack = ctx.attr.deps[0]
@@ -88,10 +157,12 @@ def _pack_impl(ctx):
     # The application delivers the native code of the add-ons of every pack it ships:
     # the start pack and the packs it may load later.
     packs = [target[GodotPackInfo] for target in ctx.attr.deps]
+    export_extensions = unique_extensions([extension for each in packs for extension in each.project.export_extensions])
+    report = _missing_extension_libraries(ctx, start, export_extensions)
     delivered = struct(
         member_resource_paths = start.project.member_resource_paths,
         runtime_extensions = unique_extensions([extension for each in packs for extension in each.project.runtime_extensions]),
-        export_extensions = unique_extensions([extension for each in packs for extension in each.project.export_extensions]),
+        export_extensions = export_extensions,
         platform_libraries = unique_platform_libraries([library for each in packs for library in each.project.platform_libraries]),
         infoplists = depset(transitive = [each.project.infoplists for each in packs]),
     )
@@ -115,6 +186,7 @@ def _pack_impl(ctx):
             splash = start.splash,
         ),
         pack[OutputGroupInfo],
+        GodotMissingExtensionLibrariesInfo(report = report),
     ]
 
 def _loadable_pack_impl(ctx):
@@ -154,5 +226,8 @@ application_pack = rule(
         "ios_families": attr.string_list(default = ["iphone", "ipad"]),
         "android_min_sdk_version": attr.int(),
         "android_target_sdk_version": attr.int(),
+        "missing_extension_libraries": attr.string(default = "error", values = ["error", "report"]),
+        "_missing_extension_libraries": attr.label(default = MISSING_EXTENSION_LIBRARIES),
+        "_export_platform": attr.label(default = EXPORT_PLATFORM),
     },
 )

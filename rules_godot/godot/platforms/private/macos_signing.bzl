@@ -59,6 +59,7 @@ def _sign_impl(ctx):
         debug_symbols = groups.debug_symbols,
         validation = groups._validation,
         runtime_component = app.runtime_component,
+        missing_extension_libraries = groups.missing_extension_libraries,
     )
 
 godot_macos_sign = rule(
