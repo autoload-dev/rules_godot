@@ -29,9 +29,9 @@ def missing_extension_libraries_report(pack):
     info = target[GodotMissingExtensionLibrariesInfo] if GodotMissingExtensionLibrariesInfo in target else None
     return depset([info.report] if info and info.report else [])
 
-def missing_extension_libraries_mode(settings, attr):
+def _missing_mode(flag, attr):
     """The application's choice for missing extension libraries: the flag's when given, else its own."""
-    return settings[MISSING_EXTENSION_LIBRARIES] or attr.missing_extension_libraries
+    return flag or attr.missing_extension_libraries
 
 def _android_values(attr):
     if attr.android_min_sdk_version < 0 or attr.android_target_sdk_version < 0:
@@ -100,7 +100,7 @@ def application_context(settings, attr):
         MERGE_ANDROID_MANIFEST_PERMISSIONS: False,
         # The packs of an application that builds without missing libraries validate their
         # content as it does; others keep the build's value, and so its configuration.
-        MISSING_EXTENSION_LIBRARIES: "report" if missing_extension_libraries_mode(settings, attr) == "report" else settings[MISSING_EXTENSION_LIBRARIES],
+        MISSING_EXTENSION_LIBRARIES: "report" if _missing_mode(settings[MISSING_EXTENSION_LIBRARIES], attr) == "report" else settings[MISSING_EXTENSION_LIBRARIES],
     }
 
 _application_transition = transition(
@@ -114,26 +114,26 @@ def _platform_name(ctx, pack):
     export_platform = ctx.attr._export_platform[BuildSettingInfo].value
     return export_platform.rpartition(":")[2] if export_platform else " ".join([pack.operating_system] + pack.cpus)
 
-def _missing_extension_libraries(ctx, packs):
+def _missing_extension_libraries(ctx, pack, extensions):
     """
     Fail or report for the extensions the packs reach that have no library in this slice.
+
+    Args:
+        ctx: Context of the application pack.
+        pack: GodotPackInfo of the start pack.
+        extensions: GodotExtensionInfo of every pack's extensions.
 
     Returns:
         The report File where the application builds without them, or None.
     """
-    missing = sorted({
-        extension.label: None
-        for each in packs
-        for extension in each.project.export_extensions
-        if not extension.library
-    })
-    mode = ctx.attr._missing_extension_libraries[BuildSettingInfo].value or ctx.attr.missing_extension_libraries
+    missing = sorted([extension.label for extension in extensions if not extension.library])
     if not missing:
         return None
+    mode = _missing_mode(ctx.attr._missing_extension_libraries[BuildSettingInfo].value, ctx.attr)
     application = str(ctx.label).removeprefix("@@").removesuffix(".pack")
     listing = "%s: no extension library for %s in:\n%s" % (
         application,
-        _platform_name(ctx, packs[0]),
+        _platform_name(ctx, pack),
         "\n".join(["  " + label for label in missing]),
     )
     if mode != "report":
@@ -143,7 +143,7 @@ def _missing_extension_libraries(ctx, packs):
             "to build without them."
         ))
 
-    # The warning the issue asks for: the build goes on without these libraries.
+    # A warning in the build's output, since the application builds without the libraries.
     # buildifier: disable=print
     print("WARNING: %s\nIt builds without them; scripts that use their classes fail at run time." % listing)
     report = ctx.actions.declare_file(ctx.label.name.removesuffix(".pack") + ".missing_extension_libraries.txt")
@@ -157,11 +157,12 @@ def _pack_impl(ctx):
     # The application delivers the native code of the add-ons of every pack it ships:
     # the start pack and the packs it may load later.
     packs = [target[GodotPackInfo] for target in ctx.attr.deps]
-    report = _missing_extension_libraries(ctx, packs)
+    export_extensions = unique_extensions([extension for each in packs for extension in each.project.export_extensions])
+    report = _missing_extension_libraries(ctx, start, export_extensions)
     delivered = struct(
         member_resource_paths = start.project.member_resource_paths,
         runtime_extensions = unique_extensions([extension for each in packs for extension in each.project.runtime_extensions]),
-        export_extensions = unique_extensions([extension for each in packs for extension in each.project.export_extensions]),
+        export_extensions = export_extensions,
         platform_libraries = unique_platform_libraries([library for each in packs for library in each.project.platform_libraries]),
         infoplists = depset(transitive = [each.project.infoplists for each in packs]),
     )
