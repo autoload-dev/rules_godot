@@ -18,7 +18,8 @@ def _export_platform_impl(
         environment,
         parents,
         constraint_values,
-        exec_properties):
+        exec_properties,
+        threads):
     for declaration in export_platform_declarations(
         name,
         operating_system,
@@ -29,6 +30,7 @@ def _export_platform_impl(
         constraint_values = constraint_values,
         exec_properties = exec_properties,
         visibility = visibility,
+        threads = threads,
     ):
         native.platform(**declaration)
 
@@ -101,6 +103,15 @@ godot_export_platform = macro(
         ),
         "exec_properties": attr.string_dict(
             doc = "Execution properties shared by the export platform and every platform slice.",
+            configurable = False,
+        ),
+        "threads": attr.bool(
+            doc = """
+            Whether a web export platform runs threads: Godot's threaded web templates, the
+            feature tag threads instead of nothreads, and extensions built with threads. A
+            threaded application needs cross-origin isolation from its host. Web only;
+            False by default, as Godot's own default since 4.3.
+            """,
             configurable = False,
         ),
     },

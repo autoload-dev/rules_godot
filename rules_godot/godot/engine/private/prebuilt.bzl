@@ -72,6 +72,7 @@ def _runtime_impl(ctx):
         debug_symbols = None,
         minimum_os = "",
         emscripten_version = ctx.attr.emscripten_version,
+        web_templates = {kind: target.files.to_list()[0] for target, kind in ctx.attr.web_templates.items()},
     ), PrebuiltArtifactInfo(digest = ctx.attr.digest)]
 
 prebuilt_runtime = rule(
@@ -83,6 +84,10 @@ prebuilt_runtime = rule(
         "bundle_files": attr.label_keyed_string_dict(allow_files = True),
         "platform": attr.string(mandatory = True, values = ["linux", "macos", "ios", "android", "web"]),
         "emscripten_version": attr.string(doc = "The Emscripten version a web template was built with; empty elsewhere."),
+        "web_templates": attr.label_keyed_string_dict(
+            doc = "The godot.wasm of each web template the runtime describes, to its kind, such as threads; empty elsewhere.",
+            allow_files = [".wasm"],
+        ),
         "cpu": attr.string(mandatory = True),
         "environment": attr.string(values = ["", "device", "simulator"]),
         "version": attr.string(mandatory = True),

@@ -173,16 +173,33 @@ func _imported(path: String) -> Image:
 # that is saved already is copied instead; saved maps each rendering to its file.
 func _render(preset: EditorExportPreset, entry: Dictionary, source: String, image: Image, saved: Dictionary) -> bool:
 	var output: String = entry["output"]
-	var key: String = JSON.stringify([source, entry.get("size", 0), entry.get("interpolation"), entry.get("opaque", false), output.get_extension()])
+	var key: String = JSON.stringify([source, entry.get("size", 0), entry.get("interpolation"), entry.get("opaque", false), entry.get("shared_resizes"), output.get_extension()])
 	if saved.has(key):
 		var _made: Error = DirAccess.make_dir_recursive_absolute(output.get_base_dir())
 		var copied_from: String = saved[key]
 		return DirAccess.copy_absolute(copied_from, output) == OK
 	var copy: Image = image.duplicate()
+	if source.begins_with("editor_icon:"):
+		_resize_as_shared(preset, entry, copy)
 	if not _save(preset, entry, copy):
 		return false
 	saved[key] = output
 	return true
+
+
+# Resize an icon of the editor's theme as the exports before it resized the one image they
+# share: entry["shared_resizes"] names the sizes, those after guard only where it is set.
+func _resize_as_shared(preset: EditorExportPreset, entry: Dictionary, image: Image) -> void:
+	if not entry.has("shared_resizes"):
+		return
+	var shared: Dictionary = entry["shared_resizes"]
+	var sizes: Array = []
+	var guard: String = shared["guard"]
+	if preset.get(guard):
+		sizes.append_array(shared["guarded"])
+	sizes.append_array(shared["sizes"])
+	for size: int in sizes:
+		image.resize(size, size, Image.INTERPOLATE_BILINEAR)
 
 
 func _save(preset: EditorExportPreset, entry: Dictionary, image: Image) -> bool:

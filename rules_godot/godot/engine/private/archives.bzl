@@ -247,10 +247,18 @@ def _macos_cpus_error(cpus):
         return None
     return 'cpus of macOS templates must be ["universal"] or a subset of ["arm64", "x86_64"]'
 
-# The web templates the runtimes package, by variant: the archive member and the directory
-# this repository expands it to. Without threads and without GDExtension support.
-def _web_template(variant):
-    name = "web_nothreads_" + variant
+# The web templates a runtime of each variant describes, by kind: the prefix of Godot's
+# template name. The web application takes the one its export platform needs.
+_WEB_TEMPLATES = {
+    "nothreads": "web_nothreads_",
+    "threads": "web_",
+}
+
+_VARIANTS = ["release", "debug"]
+
+def _web_template(kind, variant):
+    """The archive member of a web template and the directory this repository expands it to."""
+    name = _WEB_TEMPLATES[kind] + variant
     return struct(member = "templates/%s.zip" % name, output = name)
 
 # Where godot.js names the Emscripten version the template was built with.
@@ -276,17 +284,19 @@ def _emscripten_version(ctx, directory, _fail):
 def _web_runtimes(ctx, _fail):
     """Return the runtime declarations of an archive's web templates, or None after an error."""
     runtimes = []
-    for variant in ["release", "debug"]:
-        template = _web_template(variant)
-        if not _extract_nested(ctx, template, _fail):
-            return None
-        emscripten = _emscripten_version(ctx, template.output, _fail)
+    for variant in _VARIANTS:
+        templates = {kind: _web_template(kind, variant) for kind in _WEB_TEMPLATES}
+        for template in templates.values():
+            if not _extract_nested(ctx, template, _fail):
+                return None
+        emscripten = _emscripten_version(ctx, templates["nothreads"].output, _fail)
         if emscripten == None:
             return None
         runtimes.append(fill_template(ctx, ctx.attr._web_runtime_template, {
             "{NAME}": repr(template_target("web", "wasm32", variant)),
-            "{BINARY}": repr(template.output + "/godot.wasm"),
-            "{FILES}": repr(template.output + "/**"),
+            "{BINARY}": repr(templates["nothreads"].output + "/godot.wasm"),
+            "{FILES}": ", ".join([repr(template.output + "/**") for template in templates.values()]),
+            "{TEMPLATES}": repr({template.output + "/godot.wasm": kind for kind, template in templates.items()}),
             "{EMSCRIPTEN_VERSION}": repr(emscripten),
             "{BUNDLED_PACKAGES}": repr(BUNDLED_PACKAGES),
             "{VARIANT}": repr(variant),
@@ -327,7 +337,7 @@ _PLATFORMS = {
     ),
     "web": struct(
         cpus_error = _web_cpus_error,
-        members = lambda _cpus: [_web_template(variant).member for variant in ["release", "debug"]],
+        members = lambda _cpus: [_web_template(kind, variant).member for kind in _WEB_TEMPLATES for variant in _VARIANTS],
         loads = _runtime_loads,
         targets = _web_runtimes,
     ),

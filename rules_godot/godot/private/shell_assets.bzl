@@ -235,6 +235,9 @@ def _macos(ctx, profile, assets):
 # Image.resize's default, which Godot's web export resizes the touch icon with.
 _BILINEAR = 1
 
+# The icons of the web manifest of a progressive web app, square, in pixels.
+_PWA_ICON_SIZES = [144, 180, 512]
+
 def _web(ctx, assets):
     """The images of Godot's web export: the page's icons and its boot splash, as loaded."""
     images = ctx.actions.declare_directory(ctx.label.name + ".web")
@@ -252,6 +255,25 @@ def _web(ctx, assets):
                 "size": 180,
                 "interpolation": _BILINEAR,
             },
+        ] + [
+            {
+                # The progressive web app's icons, which the packager takes only for one.
+                "name": "pwa_%d.png" % size,
+                "output": "%s/pwa_%d.png" % (images.path, size),
+                "sources": [_option("progressive_web_app/icon_%dx%d" % (size, size))] + icon,
+                "size": size,
+                "interpolation": _BILINEAR,
+                # Godot resizes the editor theme's icon in place, so each default icon
+                # starts from the one before it: from the touch icon where the page has
+                # one, then from each earlier manifest icon.
+                "shared_resizes": {
+                    "guard": "html/export_icon",
+                    "guarded": [180],
+                    "sizes": _PWA_ICON_SIZES[:index],
+                },
+            }
+            for index, size in enumerate(_PWA_ICON_SIZES)
+        ] + [
             {
                 "name": "splash.png",
                 "output": images.path + "/splash.png",

@@ -45,6 +45,28 @@ godot_app(
     tags = ["manual"],
 )
 
+# A progressive web app, which the tests build for the web with threads.
+PWA_EXPORT_OPTIONS = WEB_EXPORT_OPTIONS | {
+    "progressive_web_app/enabled": "true",
+    "progressive_web_app/display": "2",
+    "progressive_web_app/orientation": "1",
+    "progressive_web_app/background_color": "Color(0.1, 0.2, 0.3, 1)",
+}
+
+godot_pack(
+    name = "pwa_pack",
+    export_options = PWA_EXPORT_OPTIONS,
+    project = ":parity",
+    tags = ["manual"],
+    deps = [":main"],
+)
+
+godot_app(
+    name = "pwa_app",
+    pack = ":pwa_pack",
+    tags = ["manual"],
+)
+
 filegroup(
     name = "sources",
     srcs = [

@@ -109,9 +109,17 @@ def _android_sdk_value(row, context, profile, where):
         )
     return str(minimum if row["sdk"] == "min" else target)
 
+def _web_threads_problem(_row, scope):
+    return None if scope.operating_system == "web" else "web_threads requires the web exporter"
+
+def _web_threads_value(_row, context, _profile, _where):
+    # Contexts without the field, as unit tests build them, run no threads.
+    return getattr(context, "threads", False)
+
 # Each derivation's operands, the policy check of its row and the value it derives.
 _OPERATIONS = {
     "constant": struct(operands = ["value"], problem = _constant_problem, value = _constant_value),
+    "web_threads": struct(operands = [], problem = _web_threads_problem, value = _web_threads_value),
     "first_cpu": struct(operands = [], problem = _first_cpu_problem, value = _first_cpu_value),
     "cpu_member": struct(
         operands = ["cpu"],

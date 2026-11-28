@@ -11,6 +11,7 @@ load("//godot:providers.bzl", "GodotPackInfo", "GodotWebAppInfo")
 load("//godot/private:export_options.bzl", "string_option")
 load("//godot/private:providers.bzl", "GodotComponentInfo", "GodotRuntimeInfo")
 load("//godot/private/config:application.bzl", "missing_extension_libraries_report")
+load("//godot/private/config:settings.bzl", "THREADS_CONSTRAINT")
 load(":launch.bzl", "LAUNCH_ATTRS", "launcher")
 load(":shell.bzl", "ENGINE_CHECK_ATTRS", "check_engine", "pack_facts")
 
@@ -33,37 +34,64 @@ def _check_inputs(ctx, pack, runtime):
     if scripts:
         fail("%s: Godot exports no C# project for the web; the pack contains %s" % (ctx.label, ", ".join(scripts)))
 
-def _custom_shell(ctx, pack):
-    """The pack's own HTML shell that html/custom_html_shell names, or None."""
-    path = string_option(pack.export_options, "html/custom_html_shell")
+def _pack_file(ctx, pack, option):
+    """The file of the pack an export option names, such as its own HTML shell, or None."""
+    path = string_option(pack.export_options, option)
     if not path:
         return None
-    shell = pack.project.member_resource_paths.get(path.removeprefix("res://"))
-    if not shell:
-        fail("%s: html/custom_html_shell names %s, which is no file of the pack" % (ctx.label, path))
-    return shell
+    file = pack.project.member_resource_paths.get(path.removeprefix("res://"))
+    if not file:
+        fail("%s: %s names %s, which is no file of the pack" % (ctx.label, option, path))
+    return file
+
+# Headers that make a page cross-origin isolated, which threads need.
+_ISOLATION_HEADERS = {
+    "Cross-Origin-Embedder-Policy": "require-corp",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+def _isolation(pack, threads):
+    """
+    What the host must do for the application to start: none, headers or service_worker.
+
+    A progressive web app that ensures the isolation headers supplies them from its service
+    worker; the export options are Godot literals, and Godot's defaults apply when unset.
+    """
+    if not threads:
+        return "none"
+    pwa = pack.export_options.get("progressive_web_app/enabled", "false").strip() == "true"
+    ensures = pack.export_options.get("progressive_web_app/ensure_cross_origin_isolation_headers", "true").strip() == "true"
+    return "service_worker" if pwa and ensures else "headers"
 
 def _package(ctx, pack, runtime, name):
     """Write the web export's directory, named name, and its ZIP; return both."""
     site = ctx.actions.declare_directory(ctx.label.name + "/" + name)
     archive = ctx.actions.declare_file(ctx.label.name + "/" + name + ".zip")
-    shell = _custom_shell(ctx, pack)
+    files = {
+        flag: file
+        for flag, file in {
+            "--shell": _pack_file(ctx, pack, "html/custom_html_shell"),
+            "--offline-page": _pack_file(ctx, pack, "progressive_web_app/offline_page"),
+        }.items()
+        if file
+    }
     args = ctx.actions.args()
-    args.add("--runtime", runtime.executable.dirname)
+    template = runtime.web_templates["threads" if _threads(ctx) else "nothreads"]
+    args.add("--runtime", template.dirname)
     args.add("--pack", pack.pack_file)
     args.add("--facts", pack.facts)
 
     # The web's images are one directory.
     args.add("--images", pack.icons[0].path)
-    if shell:
-        args.add("--shell", shell)
+    for flag, file in files.items():
+        args.add(flag, file)
     args.add("--output", site.path)
     args.add("--archive", archive)
     ctx.actions.run(
         executable = ctx.executable._packager,
         arguments = [args],
         inputs = depset(
-            [pack.pack_file, pack.facts] + pack.icons + ([shell] if shell else []),
+            [pack.pack_file, pack.facts] + pack.icons + files.values(),
             transitive = [runtime.files],
         ),
         outputs = [site, archive],
@@ -71,6 +99,9 @@ def _package(ctx, pack, runtime, name):
         progress_message = "Packaging web application %{label}",
     )
     return site, archive
+
+def _threads(ctx):
+    return ctx.target_platform_has_constraint(ctx.attr._threads[platform_common.ConstraintValueInfo])
 
 def _web_application_impl(ctx):
     pack = ctx.attr.pack[GodotPackInfo]
@@ -90,8 +121,8 @@ def _web_application_impl(ctx):
         "site": site,
         "entry_point": _ENTRY_POINT,
         "hook": ctx.file._web_hook,
-        # Without threads the page needs no cross-origin isolation.
-        "headers": {},
+        # The local server isolates the page that threads need, as Godot's own does.
+        "headers": _ISOLATION_HEADERS if _threads(ctx) else {},
     })
     return [
         DefaultInfo(executable = executable, files = depset([site, archive]), runfiles = runfiles),
@@ -107,7 +138,7 @@ def _web_application_impl(ctx):
             bundle = site,
             archive = archive,
             entry_point = _ENTRY_POINT,
-            cross_origin_isolation = "none",
+            cross_origin_isolation = _isolation(pack, _threads(ctx)),
             runtime_component = ctx.attr.runtime[GodotComponentInfo] if GodotComponentInfo in ctx.attr.runtime else None,
         ),
     ]
@@ -128,6 +159,7 @@ godot_web_application = rule(
         "pack": attr.label(doc = "The application pack.", mandatory = True, providers = [GodotPackInfo]),
         "runtime": attr.label(doc = "The resolved web runtime.", mandatory = True, providers = [GodotRuntimeInfo]),
         "app_name": attr.string(doc = "The name of the directory and its ZIP; the target's name by default."),
+        "_threads": attr.label(default = THREADS_CONSTRAINT),
         "_web_hook": attr.label(
             default = Label("//tools/platforms/launch:launch_web_hook.js"),
             allow_single_file = True,
