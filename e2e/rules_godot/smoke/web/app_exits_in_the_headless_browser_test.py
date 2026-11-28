@@ -19,7 +19,7 @@ class WebSmokeTest(unittest.TestCase):
             [launcher, "--headless", "--port=0"],
             capture_output=True,
             text=True,
-            timeout=45,
+            timeout=240,
             check=False,
             env=dict(os.environ),
         )

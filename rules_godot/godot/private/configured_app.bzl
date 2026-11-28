@@ -175,8 +175,11 @@ _configured_target = rule(
 
 def _configured_launcher_impl(ctx):
     target = ctx.attr.target[0]
+    launcher = target[DefaultInfo].files_to_run.executable
+    if not launcher:
+        fail("%s: %s has no launcher to run" % (ctx.label, target.label))
     executable = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = executable, target_file = target[DefaultInfo].files_to_run.executable, is_executable = True)
+    ctx.actions.symlink(output = executable, target_file = launcher, is_executable = True)
     return [DefaultInfo(executable = executable, runfiles = target[DefaultInfo].default_runfiles)]
 
 _configured_launcher = rule(

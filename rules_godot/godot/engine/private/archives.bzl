@@ -261,10 +261,17 @@ def _emscripten_version(ctx, directory, _fail):
     script = ctx.read(directory + "/godot.js")
     start = script.find(_EMSCRIPTEN_VERSION_MARKER)
     if start < 0:
-        _fail("Godot web template %s names no Emscripten version in godot.js" % directory)
+        _fail("Godot web template %s names no Emscripten version in godot.js, where %s was expected" % (
+            directory,
+            _EMSCRIPTEN_VERSION_MARKER,
+        ))
         return None
     start += len(_EMSCRIPTEN_VERSION_MARKER)
-    return script[start:script.find("\"", start)]
+    end = script.find("\"", start)
+    if end < 0:
+        _fail("Godot web template %s ends godot.js inside its Emscripten version" % directory)
+        return None
+    return script[start:end]
 
 def _web_runtimes(ctx, _fail):
     """Return the runtime declarations of an archive's web templates, or None after an error."""

@@ -22,7 +22,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 import webbrowser
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
@@ -177,6 +176,8 @@ _HEADLESS_FLAGS = (
     "--disable-gpu",
     "--use-angle=swiftshader",
     "--enable-unsafe-swiftshader",
+    # A container's /dev/shm is often too small for the renderer.
+    "--disable-dev-shm-usage",
 )
 
 
@@ -217,6 +218,7 @@ class Run:
         self.condition = threading.Condition()
         self.events: dict[int, dict[str, Any]] = {}
         self.printed = 0
+        self.load: object = None
         self.exit: dict[str, Any] | None = None
         self.notice: str | None = None
         # The streams at the time of the run, not of the import.
@@ -226,11 +228,19 @@ class Run:
     def add(self, events: Sequence[Mapping[str, Any]]) -> None:
         with self.condition:
             for event in events:
+                self._follow_load(event.get("load"))
                 self.events[event["seq"]] = dict(event)
             while self.printed in self.events:
                 self._show(self.events[self.printed])
                 self.printed += 1
             self.condition.notify_all()
+
+    def _follow_load(self, load: object) -> None:
+        """Start over for a reloaded page, which numbers its events anew."""
+        if load != self.load:
+            self.load = load
+            self.events.clear()
+            self.printed = 0
 
     def _show(self, event: Mapping[str, Any]) -> None:
         kind = event["kind"]
@@ -261,14 +271,7 @@ class Site:
 
 def _handler(site: Site, run: Run) -> Any:
     class Handler(http.server.SimpleHTTPRequestHandler):
-        extensions_map = {
-            **http.server.SimpleHTTPRequestHandler.extensions_map,
-            ".js": "text/javascript",
-            ".wasm": "application/wasm",
-            ".pck": "application/octet-stream",
-        }
-
-        def log_message(self, *_args: object) -> None:
+        def log_message(self, format: str, *args: Any) -> None:
             pass
 
         def end_headers(self) -> None:
@@ -299,6 +302,12 @@ def _handler(site: Site, run: Run) -> Any:
             if self.path == "/__rules_godot/events":
                 run.add(json.loads(body))
 
+    Handler.extensions_map = {
+        **http.server.SimpleHTTPRequestHandler.extensions_map,
+        ".js": "text/javascript",
+        ".wasm": "application/wasm",
+        ".pck": "application/octet-stream",
+    }
     return functools.partial(Handler, directory=str(site.directory))
 
 
@@ -320,13 +329,6 @@ def serve(handler: Any, port: int) -> http.server.ThreadingHTTPServer:
 # ==== Launch ==================================================================
 
 
-def _wait_for(run: Run, done: Callable[[], bool], seconds: float) -> None:
-    """Wait, holding the run's condition, until done or the time is up."""
-    deadline = time.monotonic() + seconds
-    while not done() and time.monotonic() < deadline:
-        run.condition.wait(0.05)
-
-
 def _browser_failure(browser: subprocess.Popen, log: Path) -> launch_common.LaunchError:
     output = log.read_text(errors="replace").strip().splitlines()[-20:]
     return launch_common.LaunchError(
@@ -338,21 +340,17 @@ def _browser_failure(browser: subprocess.Popen, log: Path) -> launch_common.Laun
 def _wait(run: Run, browser: subprocess.Popen | None, browser_log: Path) -> int:
     """Wait for the application's exit code, or the page's notice, and return the code."""
     with run.condition:
-        while run.exit is None:
-            if run.notice is not None:
-                # The page also shows a notice when the engine exits with an error code,
-                # just before it reports the exit.
-                _wait_for(run, lambda: run.exit is not None, 2)
-                if run.exit is None:
-                    launch_common.log("the page stopped with: " + run.notice)
-                    return PAGE_FAILED
-            elif browser is not None and browser.poll() is not None:
+        while run.exit is None and run.notice is None:
+            if browser is not None and browser.poll() is not None:
                 raise _browser_failure(browser, browser_log)
-            else:
-                run.condition.wait(0.1)
-        # Lines the page sent before its exit may still be in flight.
+            run.condition.wait(0.1)
+        # The page also shows a notice when the engine exits with an error code, just
+        # before it reports the exit.
+        run.condition.wait_for(lambda: run.exit is not None, 2)
         exit_event = run.exit
-        _wait_for(run, lambda: run.printed > exit_event["seq"], 5)
+        if exit_event is None:
+            launch_common.log(f"the page stopped with: {run.notice}")
+            return PAGE_FAILED
         return int(exit_event["code"])
 
 
@@ -373,6 +371,11 @@ def _site(
     page = instrumented_page(
         (directory / manifest["entry_point"]).read_text(encoding="utf-8"), args
     )
+    if page is None and options.headless:
+        raise launch_common.LaunchError(
+            f"the page {manifest['entry_point']} has no {_ENGINE_SCRIPT} and no {_ENGINE} to report "
+            "the log and the exit code through, which --headless needs"
+        )
     if page is None:
         launch_common.log(
             "the page has no Godot engine script to report through, so the launcher shows no log "
@@ -387,16 +390,24 @@ def _open(
 ) -> subprocess.Popen | None:
     """Open url in the system's default browser, or start the browser and return its process."""
     if browser is None:
-        webbrowser.open(url)
+        if not webbrowser.open(url):
+            raise launch_common.LaunchError(
+                f"this host has no default browser to open {url}; name one with --device"
+            )
         return None
-    with (Path(profile) / "browser.log").open("w") as log:
-        return subprocess.Popen(
-            browser_command(browser, url, profile, headless),
-            stdin=subprocess.DEVNULL,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-        )
+    try:
+        with (Path(profile) / "browser.log").open("w") as log:
+            return subprocess.Popen(
+                browser_command(browser, url, profile, headless),
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+    except OSError as error:
+        raise launch_common.LaunchError(
+            f"cannot start the browser {browser.path}: {error}"
+        ) from error
 
 
 def launch(

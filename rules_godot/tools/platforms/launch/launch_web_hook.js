@@ -6,6 +6,8 @@
 	'use strict';
 	const launch = window.__RULES_GODOT__ || {};
 	let sequence = 0;
+	// Each page load numbers its events anew; the launcher tells loads apart by this.
+	const load = Date.now() + Math.random();
 
 	// One request in flight at a time, carrying every event queued meanwhile: a burst of
 	// prints with a request each loses lines.
@@ -25,7 +27,7 @@
 			});
 	}
 	function send(kind, data) {
-		queue.push(Object.assign({ seq: sequence++, kind: kind }, data));
+		queue.push(Object.assign({ load: load, seq: sequence++, kind: kind }, data));
 		flush();
 	}
 

@@ -1,7 +1,6 @@
 """Tests of the web launcher with a stand-in browser that plays the page's part."""
 
 import io
-import json
 import os
 import shutil
 import stat
@@ -58,10 +57,9 @@ class BrowsersTest(unittest.TestCase):
         self.assertEqual(
             chromium, launch_web.choose_browser("chromium", False, [chromium])
         )
-        self.assertEqual(
-            "/opt/edge/msedge",
-            launch_web.choose_browser("/opt/edge/msedge", True, []).path,
-        )
+        named = launch_web.choose_browser("/opt/edge/msedge", True, [])
+        assert named is not None
+        self.assertEqual("/opt/edge/msedge", named.path)
         with self.assertRaisesRegex(LaunchError, "no browser safari on this host"):
             launch_web.choose_browser("safari", False, [chromium])
 
@@ -78,6 +76,7 @@ class BrowsersTest(unittest.TestCase):
 class PageTest(unittest.TestCase):
     def test_hook_wraps_the_engine_configuration(self) -> None:
         page = launch_web.instrumented_page(_PAGE, ["--headless"])
+        assert page is not None
         self.assertIn('<script src="/__rules_godot/hook.js"></script>', page)
         self.assertIn("new Engine(window.__rulesGodot(GODOT_CONFIG))", page)
 
@@ -95,6 +94,7 @@ class PageTest(unittest.TestCase):
             ]
         )
         self.assertEqual("one\ntwo\n", out.getvalue())
+        assert run.exit is not None
         self.assertEqual(3, run.exit["code"])
 
 

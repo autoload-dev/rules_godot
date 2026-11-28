@@ -52,7 +52,9 @@ def _package(ctx, pack, runtime, name):
     args.add("--runtime", runtime.executable.dirname)
     args.add("--pack", pack.pack_file)
     args.add("--facts", pack.facts)
-    args.add_all(pack.icons, before_each = "--images", expand_directories = False)
+
+    # The web's images are one directory.
+    args.add("--images", pack.icons[0].path)
     if shell:
         args.add("--shell", shell)
     args.add("--output", site.path)

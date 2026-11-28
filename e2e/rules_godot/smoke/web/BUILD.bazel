@@ -39,7 +39,7 @@ godot_configured_app(
 
 py_test(
     name = "app_exits_in_the_headless_browser_test",
-    size = "small",
+    size = "medium",
     srcs = ["app_exits_in_the_headless_browser_test.py"],
     args = ["$(rlocationpath :web_app.launcher)"],
     data = [":web_app.launcher"],

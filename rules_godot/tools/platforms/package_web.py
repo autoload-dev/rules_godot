@@ -152,8 +152,13 @@ def export(args: argparse.Namespace) -> None:
         f"{NAME}.pck": (site / f"{NAME}.pck").stat().st_size,
         f"{NAME}.wasm": (site / f"{NAME}.wasm").stat().st_size,
     }
-    shell = (args.shell or args.runtime / "godot.html").read_text(encoding="utf-8")
-    (site / f"{NAME}.html").write_text(page(shell, facts, file_sizes), encoding="utf-8")
+    # Godot reads and writes the shell's bytes: no newline translation either way.
+    with (args.shell or args.runtime / "godot.html").open(
+        encoding="utf-8", newline=""
+    ) as source:
+        shell = source.read()
+    with (site / f"{NAME}.html").open("w", encoding="utf-8", newline="") as html:
+        html.write(page(shell, facts, file_sizes))
     copy_images(args.images, site, facts)
     _renderer_note(facts)
     write_zip(
