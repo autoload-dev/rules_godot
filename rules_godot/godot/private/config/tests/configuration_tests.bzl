@@ -108,6 +108,8 @@ def _test_export_platform_error_names_each_invalid_field(env):
         ("ios", ["arm32"], "simulator", [], "iOS simulator has no CPU @@platforms//cpu:armv7"),
         ("ios", ["arm64"], "mixed", [], "device or simulator"),
         ("android", ["arm64"], None, ["one", "two"], "at most one"),
+        ("web", ["x86_64"], None, [], "exactly the CPU @platforms//cpu:wasm32"),
+        ("android", ["arm64", "wasm32"], None, [], "exactly the CPU @platforms//cpu:wasm32"),
     ]:
         env.expect.that_str(export_platform_error(operating_system, cpus, environment, parents)).contains(message)
 
@@ -120,6 +122,7 @@ def _test_export_platform_error_names_each_invalid_field(env):
         ("ios", ["x86_64", "arm64"], "simulator"),
         ("ios", ["arm64"], None),
         ("macos", ["arm64"], None),
+        ("web", ["wasm32"], None),
     ]:
         env.expect.that_str(export_platform_error(operating_system, cpus, environment, [])).equals("")
 

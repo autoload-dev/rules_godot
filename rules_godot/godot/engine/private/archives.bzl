@@ -247,6 +247,57 @@ def _macos_cpus_error(cpus):
         return None
     return 'cpus of macOS templates must be ["universal"] or a subset of ["arm64", "x86_64"]'
 
+# The web templates the runtimes package, by variant: the archive member and the directory
+# this repository expands it to. Without threads and without GDExtension support.
+def _web_template(variant):
+    name = "web_nothreads_" + variant
+    return struct(member = "templates/%s.zip" % name, output = name)
+
+# Where godot.js names the Emscripten version the template was built with.
+_EMSCRIPTEN_VERSION_MARKER = "godot_js_emscripten_get_version(){const emscriptenVersionPtr=GodotRuntime.allocString(\""
+
+def _emscripten_version(ctx, directory, _fail):
+    """The Emscripten version a web template's godot.js names, or None after an error."""
+    script = ctx.read(directory + "/godot.js")
+    start = script.find(_EMSCRIPTEN_VERSION_MARKER)
+    if start < 0:
+        _fail("Godot web template %s names no Emscripten version in godot.js, where %s was expected" % (
+            directory,
+            _EMSCRIPTEN_VERSION_MARKER,
+        ))
+        return None
+    start += len(_EMSCRIPTEN_VERSION_MARKER)
+    end = script.find("\"", start)
+    if end < 0:
+        _fail("Godot web template %s ends godot.js inside its Emscripten version" % directory)
+        return None
+    return script[start:end]
+
+def _web_runtimes(ctx, _fail):
+    """Return the runtime declarations of an archive's web templates, or None after an error."""
+    runtimes = []
+    for variant in ["release", "debug"]:
+        template = _web_template(variant)
+        if not _extract_nested(ctx, template, _fail):
+            return None
+        emscripten = _emscripten_version(ctx, template.output, _fail)
+        if emscripten == None:
+            return None
+        runtimes.append(fill_template(ctx, ctx.attr._web_runtime_template, {
+            "{NAME}": repr(template_target("web", "wasm32", variant)),
+            "{BINARY}": repr(template.output + "/godot.wasm"),
+            "{FILES}": repr(template.output + "/**"),
+            "{EMSCRIPTEN_VERSION}": repr(emscripten),
+            "{BUNDLED_PACKAGES}": repr(BUNDLED_PACKAGES),
+            "{VARIANT}": repr(variant),
+            "{VERSION}": repr(ctx.attr.version),
+            "{DIGEST}": repr(ctx.attr.integrity),
+        }))
+    return runtimes
+
+def _web_cpus_error(cpus):
+    return None if cpus in [[], ["wasm32"]] else 'cpus of web templates must be empty or ["wasm32"]'
+
 def _ios_cpus_error(cpus):
     return "cpus must be empty for iOS templates" if cpus else None
 
@@ -273,6 +324,12 @@ _PLATFORMS = {
         binary = _macos_binary,
         missing_binary = "set cpus to match the archive layout",
         runtime_data = '\n    data = [":macos_files"],',
+    ),
+    "web": struct(
+        cpus_error = _web_cpus_error,
+        members = lambda _cpus: [_web_template(variant).member for variant in ["release", "debug"]],
+        loads = _runtime_loads,
+        targets = _web_runtimes,
     ),
     "ios": struct(
         cpus_error = _ios_cpus_error,
@@ -357,9 +414,9 @@ _TEMPLATES_ARCHIVE_ATTRS = {
     "version": _VERSION_ATTR,
     "bundled_packages": _BUNDLED_PACKAGES_ATTR,
     "platform": attr.string(
-        doc = "Godot platform whose templates the repository extracts: linux, macos or ios.",
+        doc = "Godot platform whose templates the repository extracts: linux, macos, ios or web.",
         mandatory = True,
-        values = ["linux", "macos", "ios"],
+        values = ["linux", "macos", "ios", "web"],
     ),
     "cpus": attr.string_list(
         doc = """
@@ -374,6 +431,7 @@ _TEMPLATES_ARCHIVE_RULE_ATTRS = _TEMPLATES_ARCHIVE_ATTRS | {
     "_prebuilt_bzl": attr.label(default = Label("//godot/engine/private:prebuilt.bzl")),
     "_build_template": attr.label(default = Label("//godot/engine/private:export_templates.BUILD.tpl")),
     "_runtime_template": attr.label(default = Label("//godot/engine/private:prebuilt_runtime.BUILD.tpl")),
+    "_web_runtime_template": attr.label(default = Label("//godot/engine/private:web_runtime.BUILD.tpl")),
     "_apple_bzl": attr.label(default = Label("@rules_apple//apple:apple.bzl")),
     "_simulator_constraint": attr.label(default = Label("@apple_support//constraints:simulator")),
     "_ios_template": attr.label(default = Label("//godot/engine/private:ios_templates.BUILD.tpl")),

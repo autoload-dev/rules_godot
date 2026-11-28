@@ -58,3 +58,20 @@ GodotDesktopAppInfo = provider(
         "runtime_component": "provenance of the runtime component packaged in the bundle, with the fields of editor_component of GodotPackInfo, or None for an opaque runtime",
     },
 )
+
+GodotWebAppInfo = provider(
+    doc = """
+    A web application: the directory of Godot's web export and its archive.
+
+    Produced by godot_app for a web export platform. A rule that deploys or starts the
+    application reads `ctx.attr.app[GodotWebAppInfo]`: it serves the bundle as it is and
+    opens its entry_point, and sends the headers cross_origin_isolation names.
+    """,
+    fields = {
+        "bundle": "File: tree artifact with the files of Godot's web export, named after the page.",
+        "archive": "File: deterministic ZIP of the bundle's files, as static hosts and itch.io take it.",
+        "entry_point": "string: the page to open, relative to the bundle: index.html.",
+        "cross_origin_isolation": "string: what the host must do for the application to start: none without threads.",
+        "runtime_component": "provenance of the runtime component packaged in the bundle, with the fields of editor_component of GodotPackInfo, or None for an opaque runtime",
+    },
+)

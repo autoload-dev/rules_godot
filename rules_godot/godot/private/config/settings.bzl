@@ -70,6 +70,12 @@ CPU_TABLE = {
         android_abi = "riscv64",
         apple_cpus = {},
     ),
+    # The web's CPU, through Emscripten's WebAssembly.
+    "wasm32": struct(
+        constraint = Label("@platforms//cpu:wasm32"),
+        android_abi = "",
+        apple_cpus = {},
+    ),
 }
 
 _CPU_TAGS = {
@@ -116,6 +122,13 @@ def _ios_error(cpus, environment):
         ", ".join([str(row.constraint) for row in CPU_TABLE.values() if environment in row.apple_cpus]),
     )
 
+def _web_error(operating_system, cpus):
+    """The error of a web export platform without exactly wasm32, or another one with it."""
+    web = operating_system == "web"
+    if cpus == ["wasm32"] if web else "wasm32" not in cpus:
+        return ""
+    return "Web export platforms take exactly the CPU @platforms//cpu:wasm32, and only they do"
+
 def _operating_system_error(operating_system, cpus, environment):
     """The error of an environment or a CPU count the operating system does not take."""
     if operating_system == "ios":
@@ -124,7 +137,17 @@ def _operating_system_error(operating_system, cpus, environment):
         return "environment is only valid for iOS"
     if operating_system in ["linux", "macos"] and len(cpus) != 1:
         return "Desktop export platforms require one CPU"
-    return ""
+    return _web_error(operating_system, cpus)
+
+# rules_godot's operating systems and their @platforms//os constraint. Godot's web
+# platform is Emscripten's: @platforms has no web.
+_OPERATING_SYSTEMS = {
+    "linux": "linux",
+    "macos": "macos",
+    "android": "android",
+    "ios": "ios",
+    "web": "emscripten",
+}
 
 def export_platform_error(operating_system, cpus, environment, parents = []):
     """
@@ -142,7 +165,7 @@ def export_platform_error(operating_system, cpus, environment, parents = []):
     Returns:
         Error text, or an empty string for a valid export platform.
     """
-    if operating_system not in ["linux", "macos", "android", "ios"]:
+    if operating_system not in _OPERATING_SYSTEMS:
         return "Unsupported operating system for an export platform: %s" % operating_system
     return (
         _cpus_error(cpus) or
@@ -152,7 +175,10 @@ def export_platform_error(operating_system, cpus, environment, parents = []):
 
 # ==== Constraints and tags ====================================================
 
-OPERATING_SYSTEM_CONSTRAINTS = {operating_system: Label("@platforms//os:" + operating_system) for operating_system in ["linux", "macos", "android", "ios"]}
+OPERATING_SYSTEM_CONSTRAINTS = {
+    operating_system: Label("@platforms//os:" + constraint)
+    for operating_system, constraint in _OPERATING_SYSTEMS.items()
+}
 
 CPU_CONSTRAINTS = {cpu: row.constraint for cpu, row in CPU_TABLE.items()}
 
@@ -197,6 +223,8 @@ ENGINE_FEATURE_TAGS = _RESERVED_FEATURE_TAGS + [
     "template",
     "threads",
     "web",
+    "web_extensions",
+    "web_noextensions",
     "windows",
 ]
 
@@ -291,7 +319,9 @@ def _platform_slices(declared, package_relative_label):
         label strings.
     """
     export_platform = str(package_relative_label(":" + declared.name))
-    desktop = declared.operating_system in ["linux", "macos"]
+
+    # The web, like a desktop, has one CPU and no split.
+    desktop = declared.operating_system in ["linux", "macos", "web"]
     ios = declared.operating_system == "ios"
     return struct(
         operating_system = declared.operating_system,
@@ -597,7 +627,7 @@ def configured_context(ctx):
         fail("Unsupported CPU for operating system %s at %s" % (operating_system, ctx.label))
     return struct(
         operating_system = operating_system,
-        preset_platform = {"linux": "Linux", "macos": "macOS", "android": "Android", "ios": "iOS"}.get(operating_system, ""),
+        preset_platform = {"linux": "Linux", "macos": "macOS", "android": "Android", "ios": "iOS", "web": "Web"}.get(operating_system, ""),
         cpus = cpus,
         cpu = cpu,
         environment = environment,

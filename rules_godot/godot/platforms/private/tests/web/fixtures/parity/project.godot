@@ -1,0 +1,13 @@
+; A web application's project: a name, a boot splash color and a main scene that quits.
+
+config_version=5
+
+[application]
+
+config/name="Web Parity"
+run/main_scene="res://main.tscn"
+boot_splash/bg_color=Color(0.2, 0.4, 0.6, 1)
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"

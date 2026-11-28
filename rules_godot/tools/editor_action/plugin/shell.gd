@@ -120,8 +120,9 @@ func _copies(entry: Dictionary, path: String) -> bool:
 
 
 # The path a source names. option:NAME and setting:NAME read it from an export
-# option or a project setting, and file:PATH names an image file. A pair
-# [source, condition] applies only if the condition resolves to a path too.
+# option or a project setting, and file:PATH names an image file. editor_icon:NAME
+# stays as it is: an icon of the editor's theme. A pair [source, condition] applies
+# only if the condition resolves to a path too.
 func _resolve(preset: EditorExportPreset, source: Variant) -> String:
 	if source is Array:
 		var pair: Array = source
@@ -133,12 +134,17 @@ func _resolve(preset: EditorExportPreset, source: Variant) -> String:
 		return str(preset.get(source_name)).strip_edges()
 	if kind == "setting":
 		return str(preset.get_project_setting(source_name)).strip_edges()
+	if kind == "editor_icon":
+		return text
 	return source_name
 
 
 # As EditorExportPlatform loads icons and splash images: the imported texture,
-# else the image file.
+# else the image file, or an icon of the editor's theme, as the web export's default.
 func _load(path: String) -> Image:
+	if path.begins_with("editor_icon:"):
+		var theme: Theme = EditorInterface.get_editor_theme()
+		return theme.get_icon(path.trim_prefix("editor_icon:"), "EditorIcons").get_image()
 	var imported: Image = _imported(path)
 	if imported != null:
 		return imported

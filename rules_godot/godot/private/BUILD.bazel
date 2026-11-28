@@ -492,6 +492,7 @@ bzl_library(
         "//godot/platforms/private:desktop",
         "//godot/platforms/private:ios",
         "//godot/platforms/private:macos_signing",
+        "//godot/platforms/private:web",
         "//godot/private/config:application",
         "//godot/private/config:settings",
     ],

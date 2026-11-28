@@ -173,8 +173,27 @@ _configured_target = rule(
     },
 )
 
+def _configured_launcher_impl(ctx):
+    target = ctx.attr.target[0]
+    launcher = target[DefaultInfo].files_to_run.executable
+    if not launcher:
+        fail("%s: %s has no launcher to run" % (ctx.label, target.label))
+    executable = ctx.actions.declare_file(ctx.label.name)
+    ctx.actions.symlink(output = executable, target_file = launcher, is_executable = True)
+    return [DefaultInfo(executable = executable, runfiles = target[DefaultInfo].default_runfiles)]
+
+_configured_launcher = rule(
+    doc = "The `bazel run` launcher of an application built under an export platform and build settings of its own.",
+    implementation = _configured_launcher_impl,
+    executable = True,
+    attrs = CONFIGURED_ATTRS | {
+        "target": attr.label(doc = "The application.", mandatory = True, cfg = _configured),
+    },
+)
+
 def _configured_app_impl(name, visibility, app, debug_symbols, **kwargs):
     _configured_target(name = name, visibility = visibility, target = app, **kwargs)
+    _configured_launcher(name = name + ".launcher", visibility = visibility, target = app, **kwargs)
     _configured_target(
         name = name + ".debug_symbols",
         visibility = visibility,
@@ -189,8 +208,9 @@ godot_configured_app = macro(
 
     A configured application lets one `bazel build` or `bazel test` invocation build a
     mobile or release application beside the desktop targets. The macro declares `<name>`,
-    the application, and `<name>.debug_symbols`, its debug symbols, both under the same
-    configuration. They carry the application's default outputs and its providers, such as
+    the application, `<name>.debug_symbols`, its debug symbols, and `<name>.launcher`, what
+    `bazel run` of the application runs, all under the same configuration; a test may run
+    the launcher, as the web smoke test does with --headless. They carry the application's default outputs and its providers, such as
     rules_android's AndroidBundleInfo and ApkInfo and rules_apple's AppleBundleInfo. An
     attribute that is unset keeps the build's own setting. ANDROID_RELEASE and
     APPLE_RELEASE, from the same module, hold the native settings of a release whose debug

@@ -71,6 +71,7 @@ def _runtime_impl(ctx):
         variant = ctx.attr.variant,
         debug_symbols = None,
         minimum_os = "",
+        emscripten_version = ctx.attr.emscripten_version,
     ), PrebuiltArtifactInfo(digest = ctx.attr.digest)]
 
 prebuilt_runtime = rule(
@@ -80,7 +81,8 @@ prebuilt_runtime = rule(
         "binary": attr.label(allow_single_file = True),
         "data": attr.label_list(allow_files = True),
         "bundle_files": attr.label_keyed_string_dict(allow_files = True),
-        "platform": attr.string(mandatory = True, values = ["linux", "macos", "ios", "android"]),
+        "platform": attr.string(mandatory = True, values = ["linux", "macos", "ios", "android", "web"]),
+        "emscripten_version": attr.string(doc = "The Emscripten version a web template was built with; empty elsewhere."),
         "cpu": attr.string(mandatory = True),
         "environment": attr.string(values = ["", "device", "simulator"]),
         "version": attr.string(mandatory = True),

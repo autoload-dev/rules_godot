@@ -100,6 +100,13 @@ godot_export_platform(
     operating_system = "ios",
 )
 
+# The browser, through Emscripten's WebAssembly, without threads.
+godot_export_platform(
+    name = "web_wasm32",
+    cpus = ["@platforms//cpu:wasm32"],
+    operating_system = "web",
+)
+
 # Public operating system predicates are reusable for libraries, engines and compatibility.
 
 config_setting(
@@ -115,6 +122,12 @@ config_setting(
 config_setting(
     name = "is_android",
     constraint_values = ["@platforms//os:android"],
+)
+
+# rules_godot calls the operating system web; Bazel's constraint is Emscripten's.
+config_setting(
+    name = "is_web",
+    constraint_values = ["@platforms//os:emscripten"],
 )
 
 config_setting(

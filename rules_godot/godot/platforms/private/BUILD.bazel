@@ -227,3 +227,16 @@ bzl_library(
         "//godot/private:release",
     ],
 )
+
+bzl_library(
+    name = "web",
+    srcs = ["web.bzl"],
+    deps = [
+        ":launch",
+        ":shell",
+        "//godot:providers",
+        "//godot/private:export_options",
+        "//godot/private:providers",
+        "//godot/private/config:application",
+    ],
+)

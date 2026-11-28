@@ -1,0 +1,51 @@
+load("@autoload_rules_godot//godot:app.bzl", "godot_app", "godot_configured_app")
+load("@autoload_rules_godot//godot:defs.bzl", "godot_pack", "godot_project", "godot_resources")
+load("@rules_python//python:defs.bzl", "py_test")
+
+# The web smoke path: build a web application and start it in this host's headless Chromium
+# browser, which reports its log and its exit code.
+godot_resources(
+    name = "main",
+    srcs = [
+        "main/main.gd",
+        "main/main.tscn",
+    ],
+)
+
+godot_project(
+    name = "web",
+    project_file = "project.godot",
+)
+
+godot_pack(
+    name = "pack",
+    project = ":web",
+    deps = [":main"],
+)
+
+godot_app(
+    name = "app",
+    pack = ":pack",
+    tags = ["manual"],
+)
+
+godot_configured_app(
+    name = "web_app",
+    app = ":app",
+    debug_symbols = ":app.debug_symbols",
+    platform = "@autoload_rules_godot//godot/platforms:web_wasm32",
+    tags = ["manual"],
+)
+
+py_test(
+    name = "app_exits_in_the_headless_browser_test",
+    size = "medium",
+    srcs = ["app_exits_in_the_headless_browser_test.py"],
+    args = ["$(rlocationpath :web_app.launcher)"],
+    data = [":web_app.launcher"],
+    tags = [
+        "godot_process",
+        "web",
+    ],
+    deps = ["@rules_python//python/runfiles"],
+)

@@ -18,6 +18,7 @@ load(
 )
 load("//godot/platforms/private:ios.bzl", _godot_ios_application = "godot_ios_application")
 load("//godot/platforms/private:macos_signing.bzl", _godot_macos_sign = "godot_macos_sign")
+load("//godot/platforms/private:web.bzl", _godot_web_application = "godot_web_application")
 load("//godot/private:run.bzl", _godot_source_application = "godot_source_application")
 load("//godot/private:versions.bzl", "IOS_MINIMUM_OS", "MACOS_MINIMUM_OS")
 load(
@@ -40,6 +41,7 @@ _MACOS = Label("//godot/platforms:is_macos")
 _ANDROID = Label("//godot/platforms:is_android")
 _IOS_DEVICE = Label("//godot/platforms:is_ios_device")
 _IOS_SIMULATOR = Label("//godot/platforms:is_ios_simulator")
+_WEB = Label("//godot/platforms:is_web")
 
 _DISPATCH = {
     Label("//godot/private/config:" + name): condition.operating_system
@@ -280,7 +282,7 @@ def _backend_debug_symbols(name, hidden):
         name: Name of the godot_app.
         hidden: Attributes of private targets.
     """
-    for backend in ["linux", "macos"]:
+    for backend in ["linux", "macos", "web"]:
         native.filegroup(
             name = name + "." + backend + ".debug_symbols",
             srcs = [_backend(name, backend)],
@@ -318,6 +320,7 @@ def _public_targets(name, visibility, target_compatible_with, deprecation, tags,
         _ANDROID: [],
         _IOS_DEVICE: [],
         _IOS_SIMULATOR: [],
+        _WEB: [],
         "//conditions:default": [Label("@platforms//:incompatible")],
     })
     native.alias(
@@ -454,6 +457,15 @@ def _app_impl(
         launch_storyboard = ios_launch_storyboard,
         **(common | engine_settings)
     )
+    _godot_web_application(
+        name = name + ".web",
+        app_name = name,
+        pack = ":" + name + ".pack",
+        runtime = ":" + name + ".runtime",
+        platform_deps = platform_deps,
+        platform_resources = platform_resources,
+        **common
+    )
     _editor_backend(name = name, common = common, engine = engine)
     _public_targets(
         name = name,
@@ -471,7 +483,7 @@ godot_app = macro(
     Select the export platform with --platforms. The public label forwards the
     providers, default artifacts, run behavior and output groups of the application
     backend that export platform selects: a Linux or macOS bundle, an Android APK or
-    AAB, or an iOS application. Unsupported wildcard targets are skipped; explicit
+    AAB, an iOS application, or the directory of a web export with its ZIP. Unsupported wildcard targets are skipped; explicit
     unsupported requests fail. Selected application backends need their documented SDKs
     and runtime components. `bazel run` starts the application on this host, a device,
     an emulator or a Simulator, or from sources in the editor variant, and streams its log

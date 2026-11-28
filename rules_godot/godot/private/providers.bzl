@@ -84,6 +84,7 @@ GodotRuntimeInfo = provider(
         "bundle_files": "dict of desktop bundle-relative paths to the Files the runtime executable needs beside it",
         "variant": "string: release or debug, the Godot template variant of the runtime",
         "debug_symbols": "File or None: .dSYM directory the linker wrote for a source recipe executable, as rules_cc's cc_binary does on Apple platforms with --apple_generate_dsym",
+        "emscripten_version": "string: the Emscripten version a web runtime was built with, as its godot.js names it; unset or empty for other runtimes",
         "minimum_os": "string: the deployment target the runtime was built for on Apple platforms, such as 11.0 for a macOS source recipe; empty where the producer does not declare one, as for prebuilt and imported payloads",
     },
 )

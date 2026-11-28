@@ -59,17 +59,21 @@ godot_export_platform = macro(
     implementation = _export_platform_impl,
     attrs = {
         "operating_system": attr.string(
-            doc = "Operating system: linux, macos, android or ios.",
+            doc = """
+            Operating system: linux, macos, android, ios or web. rules_godot calls the
+            browser's operating system web; its constraint is @platforms//os:emscripten.
+            """,
             mandatory = True,
-            values = ["linux", "macos", "android", "ios"],
+            values = ["linux", "macos", "android", "ios", "web"],
             configurable = False,
         ),
         "cpus": attr.label_list(
             doc = """
             Nonempty unique list of `@platforms//cpu` constraint values Godot can express:
-            `armv7`, `aarch64` (or its alias `arm64`), `x86_32`, `x86_64` and `riscv64`.
-            Desktops take one CPU, an iOS device `aarch64` and the iOS Simulator `aarch64` or
-            `x86_64`. Whether a CPU builds is decided by the registered runtime components:
+            `armv7`, `aarch64` (or its alias `arm64`), `x86_32`, `x86_64`, `riscv64` and
+            `wasm32`. Desktops take one CPU, an iOS device `aarch64`, the iOS Simulator
+            `aarch64` or `x86_64`, and the web exactly `wasm32`, which no other operating
+            system takes. Whether a CPU builds is decided by the registered runtime components:
             an application for a CPU without one fails analysis.
             """,
             mandatory = True,
