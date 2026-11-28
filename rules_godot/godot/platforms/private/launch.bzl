@@ -11,7 +11,7 @@ LAUNCH_ATTRS = {
     ),
     "_launcher": attr.label(
         default = Label("//tools/platforms/launch"),
-        allow_files = [".py"],
+        allow_files = [".py", ".js"],
     ),
     "_launcher_entry": attr.label(
         default = Label("//tools/platforms/launch:launch.py"),

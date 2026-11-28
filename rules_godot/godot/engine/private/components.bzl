@@ -395,7 +395,7 @@ def _runtime_macro_impl(name, visibility, runtime, platform, cpu, variant, versi
 
 _COMMON = {
     "cpu": attr.string(
-        doc = "CPU of the slot as Godot's CPU tag: arm32, arm64, x86_32, x86_64 or rv64.",
+        doc = "CPU of the slot as Godot's CPU tag: arm32, arm64, x86_32, x86_64, rv64 or wasm32.",
         mandatory = True,
         configurable = False,
         values = sorted(CPU_TABLE),
@@ -505,10 +505,10 @@ godot_runtime_component = macro(
             mandatory = True,
         ),
         "platform": attr.string(
-            doc = "Operating system of the slot's target platform: linux, macos, android or ios.",
+            doc = "Operating system of the slot's target platform: linux, macos, android, ios or web.",
             mandatory = True,
             configurable = False,
-            values = ["linux", "macos", "android", "ios"],
+            values = ["linux", "macos", "android", "ios", "web"],
         ),
         "variant": attr.string(
             doc = "Godot template variant the payload implements: debug or release.",

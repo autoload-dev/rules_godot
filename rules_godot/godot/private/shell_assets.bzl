@@ -232,6 +232,35 @@ def _macos(ctx, profile, assets):
     }
     return struct(spec = spec, outputs = [icons], icons = [icons], splash = [])
 
+# Image.resize's default, which Godot's web export resizes the touch icon with.
+_BILINEAR = 1
+
+def _web(ctx, assets):
+    """The images of Godot's web export: the page's icons and its boot splash, as loaded."""
+    images = ctx.actions.declare_directory(ctx.label.name + ".web")
+
+    # Without a project icon the web export takes the editor theme's default.
+    icon = [_PROJECT_ICON, "editor_icon:DefaultProjectIcon"]
+    spec = {
+        "directories": [images.path],
+        "images": [
+            {"name": "icon.png", "output": images.path + "/icon.png", "sources": icon},
+            {
+                "name": "apple-touch-icon.png",
+                "output": images.path + "/apple-touch-icon.png",
+                "sources": icon,
+                "size": 180,
+                "interpolation": _BILINEAR,
+            },
+            {
+                "name": "splash.png",
+                "output": images.path + "/splash.png",
+                "sources": ["setting:application/boot_splash/image", _file(assets.splash)],
+            },
+        ],
+    }
+    return struct(spec = spec, outputs = [images], icons = [images], splash = [images])
+
 def pack_shell_assets(ctx, preset_platform, profile, options, assets):
     """
     Declare the shell assets of a pack's export for its operating system.
@@ -255,6 +284,8 @@ def pack_shell_assets(ctx, preset_platform, profile, options, assets):
         images, section = _ios(ctx, profile, options, assets), profile["ios"]
     elif preset_platform == "macOS":
         images, section = _macos(ctx, profile, assets), profile["macos"]
+    elif preset_platform == "Web":
+        images, section = _web(ctx, assets), {"version_options": []}
     else:
         images = struct(spec = {"images": [], "directories": []}, outputs = [], icons = [], splash = [])
         section = {"version_options": []}

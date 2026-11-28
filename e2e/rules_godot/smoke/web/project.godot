@@ -1,0 +1,8 @@
+; The web smoke path's project: a main scene that prints and quits with a code of its own.
+
+config_version=5
+
+[application]
+
+config/name="Web Smoke"
+run/main_scene="res://main/main.tscn"

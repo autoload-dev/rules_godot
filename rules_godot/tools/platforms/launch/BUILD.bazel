@@ -4,7 +4,10 @@ load("@rules_python//python:defs.bzl", "py_library")
 # directly, so they use only the standard library.
 filegroup(
     name = "launch",
-    srcs = glob(["launch*.py"]),
+    srcs = glob([
+        "launch*.py",
+        "launch*.js",
+    ]),
     visibility = ["//tools:ruleset"],
 )
 
@@ -16,6 +19,9 @@ py_library(
 )
 
 exports_files(
-    ["launch.py"],
+    [
+        "launch.py",
+        "launch_web_hook.js",
+    ],
     visibility = ["//tools:ruleset"],
 )

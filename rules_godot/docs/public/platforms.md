@@ -56,9 +56,9 @@ godot_export_platform(
 ```
 
 Select one with `--platforms=//path/to:android_local`. CPUs are `@platforms//cpu`
-constraint values: `armv7`, `aarch64`, `x86_32`, `x86_64` and `riscv64`, which rules_godot
-maps to Godot's CPU feature tags and to Android ABIs. Desktops take one CPU, an iOS device
-`aarch64`, and the iOS Simulator `aarch64` or `x86_64`. A CPU builds when a runtime component
+constraint values: `armv7`, `aarch64`, `x86_32`, `x86_64`, `riscv64` and `wasm32`, which
+rules_godot maps to Godot's CPU feature tags and to Android ABIs. Desktops take one CPU, an
+iOS device `aarch64`, the iOS Simulator `aarch64` or `x86_64`, and the [web](#web) `wasm32`. A CPU builds when a runtime component
 is registered for it; otherwise analysis fails, naming the target platform that no runtime
 component matches. An engine registers every valid CPU: the official export templates'
 CPUs come prebuilt, and a catalogued engine builds the others from source.
@@ -613,6 +613,95 @@ Statically linked iOS extension libraries follow the
 [start-pack rule for extension libraries](resources.md#export-membership): their code is in
 the executable, while their descriptors remain in the PCK. A prebuilt static XCFramework follows the
 [GDExtension setup](gdextension.md#ios-static-linking).
+
+## Web
+
+A `godot_app` builds for the web export platform into what Godot's own web export produces:
+the same files under the same names and the same page, for the same project and export
+options. The result deploys unchanged to a static host or to itch.io.
+
+```sh
+bazel build //path/to:app --platforms=@autoload_rules_godot//godot/platforms:web_wasm32
+```
+
+rules_godot calls the operating system `web`; Bazel's constraint is
+`@platforms//os:emscripten`. `@autoload_rules_godot//godot/platforms:is_web` is the predicate
+for `select()`, and a consumer's own export platform declares `operating_system = "web"` with
+`cpus = ["@platforms//cpu:wasm32"]`. A web pack has the feature tags `web`, `wasm32`,
+`nothreads` and `web_noextensions`. The registered engines supply the web runtime from
+Godot's prebuilt web templates, without threads and without extension support, in the
+release and debug variants; the templates are fetched only when an application builds for
+the web. The runtime names its Godot version and the Emscripten version its templates were
+built with, and the engine version check covers it.
+
+The application's outputs are a directory and its ZIP, as Godot's export names the files;
+`--output_groups=bundle` or `--output_groups=archive` selects one:
+
+```
+app/
+  index.html
+  index.js
+  index.wasm
+  index.pck
+  index.audio.worklet.js
+  index.audio.position.worklet.js
+  index.png                   # boot splash
+  index.icon.png
+  index.apple-touch-icon.png
+app.zip
+```
+
+`GodotWebAppInfo` describes it for a rule that deploys or starts it: `bundle`, `archive`,
+`entry_point` (`index.html`) and `cross_origin_isolation` (`none` without threads).
+
+The page follows the pack's `export_options`, under the names of Godot's export dialog:
+
+| Option | Effect or owner |
+| --- | --- |
+| `html/*` | The page, as Godot writes it. `html/custom_html_shell` names a file of the pack. |
+| `vram_texture_compression/*` | Which texture families the pack keeps. |
+| `variant/thread_support` | The export platform; an authored value fails. |
+| `variant/extensions_support` | Derived from the pack's extensions; an authored value fails. |
+| `custom_template/*` | The registered engine; an authored value fails. |
+| `progressive_web_app/enabled` | Not supported yet: `true` fails. |
+
+The web runs the Compatibility renderer: a project that selects Forward+ or Mobile for the
+web gets a note when its application is packaged. Godot exports no C# project for the web,
+and its application fails analysis. An application whose add-ons bring extensions follows
+[missing extension libraries](gdextension.md#missing-extension-libraries): it fails and
+names them, or builds without them.
+
+### Run a web application
+
+`bazel run` serves the application's directory on `127.0.0.1`, opens its page in a browser
+of this host, shows the application's log on the terminal and exits with its exit code. The
+launcher inserts a script into the page it serves, never into the built files, which reports
+the log and the exit; Godot's arguments after the second `--` reach the engine as on the
+other platforms.
+
+```sh
+bazel run //path/to:app --platforms=@autoload_rules_godot//godot/platforms:web_wasm32
+bazel run //path/to:app --platforms=... -- --device=firefox -- --verbose
+bazel run //path/to:app --platforms=... -- --headless -- -- --level=3
+```
+
+| Option | Effect on the web |
+| --- | --- |
+| `--device=<name or path>` | The browser: the system's default without it, and with `--headless` the first Chromium browser found on this host |
+| `--list-devices` | List the browsers the launcher can start, then exit |
+| `--headless` | A Chromium browser of this host without a window, with software rendering, and Godot's `--headless` |
+| `--port=<number>` | The server's port; 8060 by default, the next free one when it is taken |
+| `--fresh`, `--detach`, `--env` | Fail: a browser gives the application no environment, and its storage is the browser's |
+
+The launcher uses the browsers of this host and downloads none. `--headless` needs a
+Chromium browser: Google Chrome, Chromium, Microsoft Edge or `chrome-headless-shell`. Without
+one the launcher fails and says what it looked for; `--device=<path>` names another. A
+browser the launcher starts gets a fresh profile under `/tmp`, which it deletes afterwards.
+
+An application that quits within its first frames never reports its exit: Godot's audio
+driver is still starting, and the page waits. The log arrives in full. Run it with
+`--headless`, which turns audio off, or quit after the first frames. A project without a
+main scene exits with 0 on the web, where Godot reports an error on the desktop.
 
 ## Version and build number
 

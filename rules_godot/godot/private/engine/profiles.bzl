@@ -417,12 +417,51 @@ def _ios_owned_options(profile):
         ),
     ]
 
+def _web_owned_options():
+    """
+    Return the web export's owned options.
+
+    Its variant follows the export platform and the pack's extensions, and the progressive
+    web app is not supported yet.
+    """
+    return [
+        _owned(
+            "variant/thread_support",
+            "export_platform",
+            derive = "constant",
+            placement = "preset",
+            when = "always",
+            authored = "reject",
+            value = False,
+        ),
+        _owned(
+            "variant/extensions_support",
+            "web-extensions",
+            derive = "constant",
+            placement = "preset",
+            when = "always",
+            authored = "reject",
+            value = False,
+        ),
+        # A pack may say false, Godot's default; true has no supported workflow yet.
+        _owned(
+            "progressive_web_app/enabled",
+            "web-pwa",
+            derive = "constant",
+            placement = "pack",
+            when = "always",
+            authored = "match",
+            value = False,
+        ),
+    ]
+
 def _owned_options(profile):
     return {
         "linux": [_DESKTOP_ARCHITECTURE, _NO_EMBEDDED_PACK],
         "macos": _macos_owned_options(),
         "android": _android_owned_options(profile),
         "ios": _ios_owned_options(profile),
+        "web": _web_owned_options(),
     }
 
 _GODOT_4_7["owned_export_options"] = _owned_options(_GODOT_4_7)
@@ -435,6 +474,10 @@ _GODOT_4_7["owned_export_options"] = _owned_options(_GODOT_4_7)
 # reviewed per-option inventory of a version and how to compare a new one are in
 # docs/internal/export-option-inventory.md.
 _REJECTED_OPTIONS_4_7 = {
+    "web": {
+        "custom_template/debug": "engine",
+        "custom_template/release": "engine",
+    },
     "linux": {
         "custom_template/debug": "engine",
         "custom_template/release": "engine",
@@ -555,7 +598,11 @@ _GODOT_4_7["rejected_export_options"] = _REJECTED_OPTIONS_4_7
 
 # Registered options that Godot's reflection hides and build tools read; the probe
 # asks for them by name, as it does for every option a pack authors.
-_GODOT_4_7["hidden_export_options"] = {"ios": ["capabilities/performance_a12"]}
+_GODOT_4_7["hidden_export_options"] = {
+    "ios": ["capabilities/performance_a12"],
+    # Listed only with thread support, but always written into the web page.
+    "web": ["threads/emscripten_pool_size", "threads/godot_pool_size"],
+}
 
 _GODOT_4_7["option_owners"] = {
     "export_platform": "select a godot_export_platform with --platforms",
@@ -570,6 +617,8 @@ _GODOT_4_7["option_owners"] = {
     "macos-signing": "the optional godot_app signing operation",
     "output-layout": "the godot_app target name and Bazel's output layout",
     "android-compression": "rules_android's packaging of JNI libraries",
+    "web-extensions": "the extensions of the application's packs: an application with web extensions takes the template that loads them",
+    "web-pwa": "not supported yet: progressive web apps",
 }
 
 # ==== Export hooks ============================================================

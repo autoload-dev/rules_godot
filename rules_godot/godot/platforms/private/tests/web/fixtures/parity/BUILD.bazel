@@ -1,0 +1,61 @@
+load("//godot:app.bzl", "godot_app")
+load("//godot:defs.bzl", "godot_pack", "godot_project", "godot_resources")
+load("//godot/engine/private:components.bzl", "resolved_runtime")
+
+# A web application whose pack sets the page's export options, and the files of its project
+# that Godot's own export reads.
+package(
+    default_testonly = True,
+    default_visibility = ["//godot/platforms/private/tests/web:__subpackages__"],
+)
+
+godot_project(
+    name = "parity",
+    project_file = "project.godot",
+    tags = ["manual"],
+)
+
+godot_resources(
+    name = "main",
+    srcs = [
+        "main.gd",
+        "main.tscn",
+    ],
+    tags = ["manual"],
+)
+
+# The options of the page, which Godot's export of the same project sets too.
+WEB_EXPORT_OPTIONS = {
+    "html/canvas_resize_policy": "1",
+    "html/focus_canvas_on_start": "false",
+    "html/head_include": '"<meta name=\\"theme-color\\" content=\\"#242424\\">"',
+}
+
+godot_pack(
+    name = "pack",
+    export_options = WEB_EXPORT_OPTIONS,
+    project = ":parity",
+    tags = ["manual"],
+    deps = [":main"],
+)
+
+godot_app(
+    name = "app",
+    pack = ":pack",
+    tags = ["manual"],
+)
+
+filegroup(
+    name = "sources",
+    srcs = [
+        "main.gd",
+        "main.tscn",
+        "project.godot",
+    ],
+)
+
+# The web runtime the application packages, whose template Godot's export takes.
+resolved_runtime(
+    name = "runtime",
+    tags = ["manual"],
+)

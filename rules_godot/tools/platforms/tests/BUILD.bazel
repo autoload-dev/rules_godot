@@ -140,6 +140,20 @@ py_test(
 )
 
 py_test(
+    name = "launch_web_test",
+    size = "small",
+    srcs = ["launch_web_test.py"],
+    deps = ["//tools/platforms/launch:launch_lib"],
+)
+
+py_test(
+    name = "package_web_test",
+    size = "small",
+    srcs = ["package_web_test.py"],
+    deps = ["//tools/platforms:package_web_lib"],
+)
+
+py_test(
     name = "launch_editor_test",
     size = "small",
     srcs = ["launch_editor_test.py"],

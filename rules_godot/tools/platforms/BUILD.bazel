@@ -26,6 +26,24 @@ py_library(
 )
 
 py_binary(
+    name = "package_web",
+    srcs = ["package_web.py"],
+    deps = [
+        ":godot_shell_lib",
+        ":zip_archive_lib",
+    ],
+)
+
+py_library(
+    name = "package_web_lib",
+    srcs = ["package_web.py"],
+    deps = [
+        ":godot_shell_lib",
+        ":zip_archive_lib",
+    ],
+)
+
+py_binary(
     name = "sign_macos",
     srcs = ["sign_macos.py"],
     deps = [":package_desktop_lib"],

@@ -1,0 +1,78 @@
+load("@rules_python//python:defs.bzl", "py_test")
+load("//godot/platforms/private/tests:transitions.bzl", "configured_outputs")
+load(":web_fixtures.bzl", "host_editor")
+load(":web_tests.bzl", "web_test_suite")
+
+package(default_testonly = True)
+
+_PARITY = "//godot/platforms/private/tests/web/fixtures/parity:"
+
+web_test_suite(name = "web_test_suite")
+
+host_editor(
+    name = "editor",
+    tags = ["manual"],
+)
+
+# Godot's web export and the ruleset's of one project, per engine: the stable release and
+# the next minor's preview.
+[
+    [
+        configured_outputs(
+            name = "%s_%s" % (part, engine),
+            engine = engine,
+            platform = "//godot/platforms:web_wasm32",
+            runfiles = True,
+            tags = ["manual"],
+            target = target,
+        )
+        for part, target in [
+            (
+                "app",
+                _PARITY + "app",
+            ),
+            (
+                "runtime",
+                _PARITY + "runtime",
+            ),
+            ("editor", ":editor"),
+        ]
+    ]
+    for engine in [
+        "stable",
+        "beta",
+    ]
+]
+
+# Build-output test: the application's files are those of Godot's own web export of the
+# same project with the same template and export options, under the same names, and its
+# page is Godot's line for line.
+[
+    py_test(
+        name = "web_export_matches_godots_%s_test" % engine,
+        size = "medium",
+        srcs = ["parity_test.py"],
+        args = [
+            "--app",
+            "$(rootpaths :app_%s)" % engine,
+            "--runtime",
+            "$(rootpaths :runtime_%s)" % engine,
+            "--editor",
+            "$(rootpath :editor_%s)" % engine,
+            "--project",
+            "$(rootpaths %ssources)" % _PARITY,
+        ],
+        data = [
+            ":app_" + engine,
+            ":editor_" + engine,
+            ":runtime_" + engine,
+            _PARITY + "sources",
+        ],
+        main = "parity_test.py",
+        tags = ["godot_process"],
+    )
+    for engine in [
+        "stable",
+        "beta",
+    ]
+]

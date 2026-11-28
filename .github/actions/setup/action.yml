@@ -119,6 +119,18 @@ runs:
       with:
         path: ${{ steps.sdk-cache.outputs.paths }}
         key: android-sdk-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.sdk-cache.outputs.key }}
+    # The web smoke tests start the application in the host's headless Chromium browser, as
+    # `bazel run --headless` does; the ruleset downloads none. Runner images usually have
+    # Google Chrome; a runner without one gets it here.
+    - name: Install a Chromium browser
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" == macOS ]]; then
+          [[ -d "/Applications/Google Chrome.app" ]] || brew install --cask google-chrome
+        elif ! command -v google-chrome >/dev/null && ! command -v chromium >/dev/null; then
+          curl -fsSLo /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt-get install -y /tmp/google-chrome.deb
+        fi
     # Persistent workers run from extracted repositories on the disk. Steps
     # clean up in reverse order, so Bazel stops before the disk is unmounted.
     # Only on fresh Linux runners: a persistent runner keeps its Bazel servers

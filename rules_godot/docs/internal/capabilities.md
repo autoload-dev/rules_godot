@@ -29,7 +29,7 @@ CPU or ABI, and device execution are distinct dimensions.
 6. **Check and test feedback.** GDScript checks and GdUnit suites with the right context:
    [Script checks](#script-checks) and [testing](#testing).
 7. **Content and application delivery.** Main and DLC packs and runnable applications for
-   Linux, macOS, Android and iOS: [Packs](#resource-packs-and-dlc) and
+   Linux, macOS, Android, iOS and the web: [Packs](#resource-packs-and-dlc) and
    [applications](#application-products).
 8. **Incremental feedback.** Repeat only the work a change affects:
    [Incremental feedback and caching](#incremental-feedback-and-caching).
@@ -199,6 +199,7 @@ building and focused demo and test projects.
 | <a id="cap-app-03">APP-03</a> | Produce an Android APK with native and Java, resource and manifest dependencies. | SDK, NDK, Java and engine and provider constraints apply. | [PLAT] |
 | <a id="cap-app-04">APP-04</a> | Produce an Android App Bundle. | The AAB is unsigned; sign it outside Bazel before upload. | [PLAT] |
 | <a id="cap-app-05">APP-05</a> | Produce an iOS device or simulator application with native linkage. | SDK, the runtime of the platform slice, provisioning and rules_apple provider constraints apply. | [PLAT] [ENG] |
+| <a id="cap-app-12">APP-12</a> | Produce a web application with Godot's web export's files and page, and run it in a browser of this host. | One web export platform, without threads and extensions, from Godot's prebuilt web templates; the page and files match Godot's export of the same project. `bazel run` serves it on 127.0.0.1 and reports its log and exit code; `--headless` needs a Chromium browser of the host. | [PLAT] |
 | <a id="cap-app-06">APP-06</a> | Configure application identity, versions, icons, splash, localization, privacy and permissions. | Metadata applies per operating system; not every setting exists on every operating system. | [PLAT] |
 | <a id="cap-app-07">APP-07</a> | Select debug and release variants and compatible engine and extension CPUs. | Execution platform, target platform and device or simulator are different axes. | [PLAT] [EXT] |
 | <a id="cap-app-08">APP-08</a> | Obtain matching engine, extension and application debug symbols. | Symbol content depends on the supplied or compiled debug information and the build flags. | [PLAT] [ENG] |

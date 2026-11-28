@@ -50,20 +50,15 @@ class Options:
     logcat: str | None = None
     simulator_type: str | None = None
     os_version: str | None = None
+    port: int | None = None
     godot_args: Sequence[str] = ()
 
 
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="bazel run <app> --",
-        usage="bazel run <app> -- [options] [-- <Godot arguments>]",
-        description="Install and launch a Godot application, then stream its log until it exits.",
-        allow_abbrev=False,
-    )
+def _add_target_options(parser: argparse.ArgumentParser) -> None:
     target = parser.add_argument_group("target")
     target.add_argument(
         "--device",
-        help="Android serial or AVD name, or iOS UDID or name; defaults to ANDROID_SERIAL or BAZEL_APPLE_DEVICE_UDID",
+        help="Android serial or AVD name, iOS UDID or name, or a browser's name or path; defaults to ANDROID_SERIAL, BAZEL_APPLE_DEVICE_UDID or the system's browser",
     )
     target.add_argument(
         "--list-devices",
@@ -79,8 +74,11 @@ def _parser() -> argparse.ArgumentParser:
     target.add_argument(
         "--headless",
         action="store_true",
-        help="no window: Godot --headless, emulator -no-window, no Simulator window",
+        help="no window: Godot --headless, emulator -no-window, no Simulator window, a Chromium browser without a window",
     )
+
+
+def _add_install_options(parser: argparse.ArgumentParser) -> None:
     install = parser.add_argument_group("install")
     install.add_argument(
         "--fresh",
@@ -113,6 +111,9 @@ def _parser() -> argparse.ArgumentParser:
         metavar="NAME=VALUE",
         help="environment variable of the application (desktop and iOS)",
     )
+
+
+def _add_platform_options(parser: argparse.ArgumentParser) -> None:
     android = parser.add_argument_group("Android")
     android.add_argument(
         "--emulator-arg",
@@ -144,6 +145,25 @@ def _parser() -> argparse.ArgumentParser:
         metavar="VERSION",
         help="iOS version of a simulator to start or create, such as 26.4",
     )
+    web = parser.add_argument_group("web")
+    web.add_argument(
+        "--port",
+        type=int,
+        metavar="NUMBER",
+        help="port of the local server on 127.0.0.1 (default: 8060, or the next free one)",
+    )
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="bazel run <app> --",
+        usage="bazel run <app> -- [options] [-- <Godot arguments>]",
+        description="Install and launch a Godot application, then stream its log until it exits.",
+        allow_abbrev=False,
+    )
+    _add_target_options(parser)
+    _add_install_options(parser)
+    _add_platform_options(parser)
     return parser
 
 
@@ -213,6 +233,7 @@ def parse_options(
         logcat=values.logcat,
         simulator_type=values.simulator_type,
         os_version=values.os_version,
+        port=values.port,
         godot_args=tuple(godot_args),
     )
     _reject_unaccepted_options(options, parser, platform, accepted)
