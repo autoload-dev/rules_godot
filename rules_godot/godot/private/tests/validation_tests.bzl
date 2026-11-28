@@ -158,6 +158,36 @@ def _dependents_read_interfaces(env, target):
         "interface_base.import",
     ])
 
+def _absent_direct_modes(target):
+    """The modes of the validation manifests of the unit that uses an absent extension."""
+    return [
+        json.decode(entry.action.content)["mode"]
+        for entry in target[GodotActionsInfo].every.to_list()
+        if entry.action.mnemonic == "FileWrite" and
+           entry.owner.endswith(":platform_probe_absent_direct") and
+           entry.action.outputs.to_list()[0].basename.endswith(".validate.json")
+    ]
+
+def _test_missing_extension_libraries_report_relaxes_validation(name):
+    for case, value, mode in [("report", "report", "report"), ("default", "", "fail")]:
+        analysis_test(
+            name = name + "_" + case,
+            target = _FIXTURE + ":platform_probe_validations",
+            impl = _validation_mode_is,
+            attrs = {"mode": attr.string()},
+            attr_values = {"mode": mode},
+            config_settings = {str(Label("//godot:missing_extension_libraries")): value},
+            extra_target_under_test_aspects = [godot_actions],
+        )
+    native.test_suite(name = name, tests = [name + "_report", name + "_default"])
+
+# An application that builds without missing libraries relaxes the validation of the units
+# where such an extension is absent; every other build keeps failing on them.
+def _validation_mode_is(env, target):
+    modes = _absent_direct_modes(target)
+    env.expect.that_collection(modes, expr = "validation modes").has_size(1)
+    env.expect.that_collection(modes).contains_exactly([env.ctx.attr.mode])
+
 def validation_test_suite(name):
     test_suite(
         name = name,
@@ -165,5 +195,6 @@ def validation_test_suite(name):
             _test_no_producing_action_reads_a_validation,
             _test_validation_reads_its_closure,
             _test_dependents_read_interfaces,
+            _test_missing_extension_libraries_report_relaxes_validation,
         ],
     )

@@ -381,6 +381,7 @@ def _app_impl(
         engine_lto,
         engine_vfe,
         build_profile,
+        missing_extension_libraries,
         **kwargs):
     # The inherited testonly is None unless set, which applies the package default.
     testonly = kwargs.pop("testonly")
@@ -409,6 +410,7 @@ def _app_impl(
         ios_families = ios_families,
         android_min_sdk_version = android_min_sdk_version,
         android_target_sdk_version = android_target_sdk_version,
+        missing_extension_libraries = missing_extension_libraries,
     )
     common = hidden | dict(
         exec_compatible_with = exec_compatible_with,
@@ -608,6 +610,22 @@ godot_app = macro(
             doc = "Whether this application's source-built engine drops the virtual functions nothing calls under -c opt, overriding --@autoload_rules_godot//godot:engine_vfe: on, off, or empty to keep the build's. Needs full LTO and Clang.",
             configurable = False,
             values = VFE_VALUES,
+        ),
+        "missing_extension_libraries": attr.string(
+            doc = """
+            What the application does with an extension its packs reach that has no library
+            for its platform, a select() branch of None in the extension's library: "error",
+            the default, fails analysis and names the extensions; "report" builds without
+            them, prints the list as a warning and writes it to
+            <name>.missing_extension_libraries.txt in the output group of that name, and the
+            content validation of its packs reports instead of failing where such an
+            extension is absent. --@autoload_rules_godot//godot:missing_extension_libraries,
+            when given, overrides it for one invocation. See
+            [missing extension libraries](../../gdextension.md#missing-extension-libraries).
+            """,
+            default = "error",
+            values = ["error", "report"],
+            configurable = False,
         ),
         "build_profile": attr.label(
             doc = """

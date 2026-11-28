@@ -17,6 +17,7 @@ load(
     "symbols_zip",
 )
 load("//godot/private:versions.bzl", "MACOS_MINIMUM_OS")
+load("//godot/private/config:application.bzl", "missing_extension_libraries_report")
 load("//godot/private/config:native.bzl", "APPLICATION_SCOPED_OPTIONS", "macos_application_options")
 load("//godot/private/engine:profiles.bzl", "engine_profile")
 load(":launch.bzl", "LAUNCH_ATTRS", "launcher")
@@ -318,9 +319,10 @@ def _desktop_application_impl(ctx):
         debug_symbols = depset([debug_symbols]),
         validation = depset(engine_check),
         runtime_component = ctx.attr.runtime[GodotComponentInfo] if GodotComponentInfo in ctx.attr.runtime else None,
+        missing_extension_libraries = missing_extension_libraries_report(ctx.attr.pack),
     )
 
-def desktop_result(ctx, executable, bundle, archive, operating_system, executable_path, debug_symbols, validation, runtime_component):
+def desktop_result(ctx, executable, bundle, archive, operating_system, executable_path, debug_symbols, validation, runtime_component, missing_extension_libraries):
     """
     Return the providers of one selected desktop application result.
 
@@ -337,6 +339,8 @@ def desktop_result(ctx, executable, bundle, archive, operating_system, executabl
         debug_symbols: Depset of the matching debug symbols.
         validation: Depset of validation outputs to keep.
         runtime_component: GodotComponentInfo of the packaged runtime component, or None.
+        missing_extension_libraries: Depset of the report of the extension libraries the
+            application lacks, empty where it lacks none or fails for them.
 
     Returns:
         DefaultInfo, OutputGroupInfo and GodotDesktopAppInfo.
@@ -352,6 +356,7 @@ def desktop_result(ctx, executable, bundle, archive, operating_system, executabl
             bundle = depset([bundle]),
             archive = depset([archive]),
             debug_symbols = debug_symbols,
+            missing_extension_libraries = missing_extension_libraries,
             _validation = validation,
         ),
         GodotDesktopAppInfo(

@@ -204,6 +204,24 @@ godot_project(
     tags = ["manual"],
 )
 
+# An extension without a library on macOS, where the floor engines' applications build.
+godot_extension(
+    name = "linux_only_extension",
+    entry_symbol = "linux_only_init",
+    library = select({
+        "@platforms//os:linux": ":demanding_library",
+        "//conditions:default": None,
+    }),
+    tags = ["manual"],
+)
+
+godot_pack(
+    name = "linux_only_pack",
+    project = ":demanding_project",
+    tags = ["manual"],
+    deps = [":linux_only_extension"],
+)
+
 godot_pack(
     name = "demanding_pack",
     project = ":demanding_project",

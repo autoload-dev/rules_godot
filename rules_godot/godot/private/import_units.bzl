@@ -358,6 +358,17 @@ def _declared_autoloads(autoloads, context):
     declared.update(context.autoload_overrides)
     return declared
 
+def _validation_mode(ctx, absent):
+    """
+    Return what a failed validation does.
+
+    It reports where an application builds without the absent extensions' libraries,
+    since it cannot tell the failures they cause from others.
+    """
+    if absent and ctx.attr._missing_extension_libraries[BuildSettingInfo].value == "report":
+        return "report"
+    return ctx.attr._content_validation[BuildSettingInfo].value
+
 def _run_validation(ctx, context, unit, plan):
     """Run the validation the plan describes; return its output File."""
     tc = ctx.toolchains[EDITOR_TOOLCHAIN].godot
@@ -372,7 +383,7 @@ def _run_validation(ctx, context, unit, plan):
         "authored_autoloads": mapped_path(context.authored_autoloads),
         "autoloads": plan.autoloads,
         "resource_uids": metadata_modes(ctx)["resource_uids"],
-        "mode": ctx.attr._content_validation[BuildSettingInfo].value,
+        "mode": _validation_mode(ctx, plan.extensions.absent),
     } | ({
         # Only then, so that platforms whose extensions agree validate alike.
         "absent_extensions": sorted([extension.descriptor_path for extension in plan.extensions.absent]),
@@ -422,7 +433,7 @@ def validate_unit(ctx, context, unit, closure):
 
     Args:
         ctx: Analysis context of a rule with a _validation tool, the editor toolchain,
-            METADATA_ATTRS and _content_validation.
+            METADATA_ATTRS, _content_validation and _missing_extension_libraries.
         context: GodotProjectInfo of the context, a real project.
         unit: struct of the unit's suffix, its own resource paths to Files (files) and the
             resource paths Godot ignores (ignored), whose scripts and scenes it never loads.
@@ -475,6 +486,10 @@ VALIDATION_ATTRS = {
     ),
     "_content_validation": attr.label(
         default = Label("//godot/private:content_validation"),
+        providers = [BuildSettingInfo],
+    ),
+    "_missing_extension_libraries": attr.label(
+        default = Label("//godot:missing_extension_libraries"),
         providers = [BuildSettingInfo],
     ),
 } | METADATA_ATTRS

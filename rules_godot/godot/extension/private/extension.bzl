@@ -159,6 +159,7 @@ def _extension_impl(ctx):
     tool_view = getattr(ctx.attr, "tool_view", None)
     host_tool_view = getattr(ctx.attr, "host_tool_view", None)
     extension = GodotExtensionInfo(
+        label = str(ctx.label).removeprefix("@@"),
         files = files,
         library = library,
         minimum_os_versions = dict(ctx.attr.minimum_os_versions),

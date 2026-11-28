@@ -62,6 +62,19 @@ bool_flag(
     build_setting_default = False,
 )
 
+# What an application does with an extension its packs reach that has no library for its
+# platform: error fails analysis and names it, report builds without it and lists it.
+# Empty keeps each godot_app's missing_extension_libraries; see docs/public/gdextension.md.
+string_flag(
+    name = "missing_extension_libraries",
+    build_setting_default = "",
+    values = [
+        "",
+        "error",
+        "report",
+    ],
+)
+
 # Whether godot_run and godot_test targets that leave headless unset run headless.
 bool_flag(
     name = "headless",

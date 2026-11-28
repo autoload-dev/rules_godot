@@ -110,6 +110,7 @@ GodotComponentInfo = provider(
 GodotExtensionInfo = provider(
     doc = """A GDExtension in one configuration: its configured extension library, its descriptor fragment and the resource paths of both, and those of its tool view. Produced by godot_extension/godot_cc_extension; consumed by resources, projects and application rules.""",
     fields = {
+        "label": "string: the extension's label, as applications name it when it has no library for their platform",
         "files": "depset of the descriptor fragment, the configured extension library and its runtime dependencies",
         "library": """struct, or None where the extension has no library in this configuration: the configured extension library, with
             tags (string: Godot's feature tags of the configuration joined with '.', such as android.arm64.release),
