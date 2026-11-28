@@ -14,14 +14,57 @@ host_editor(
     tags = ["manual"],
 )
 
-# Godot's web export and the ruleset's of one project, per engine: the stable release and
-# the next minor's preview.
+# Godot's web export and the ruleset's of one project, per engine (the stable release and
+# the next minor's preview) and per case: the page without threads, and a progressive web
+# app with threads.
+_CASES = {
+    "page": dict(
+        app = "app",
+        options = {
+            "html/canvas_resize_policy": "1",
+            "html/focus_canvas_on_start": "false",
+            "html/head_include": '"<meta name=\\"theme-color\\" content=\\"#242424\\">"',
+        },
+        platform = "//godot/platforms:web_wasm32",
+    ),
+    "pwa_threads": dict(
+        app = "pwa_app",
+        options = {
+            "html/canvas_resize_policy": "1",
+            "html/focus_canvas_on_start": "false",
+            "html/head_include": '"<meta name=\\"theme-color\\" content=\\"#242424\\">"',
+            "progressive_web_app/background_color": "Color(0.1, 0.2, 0.3, 1)",
+            "progressive_web_app/display": "2",
+            "progressive_web_app/enabled": "true",
+            "progressive_web_app/orientation": "1",
+            "variant/thread_support": "true",
+        },
+        platform = "//godot/platforms:web_wasm32_threads",
+    ),
+}
+
+_ENGINES = [
+    "stable",
+    "beta",
+]
+
+[
+    configured_outputs(
+        name = "editor_" + engine,
+        engine = engine,
+        runfiles = True,
+        tags = ["manual"],
+        target = ":editor",
+    )
+    for engine in _ENGINES
+]
+
 [
     [
         configured_outputs(
-            name = "%s_%s" % (part, engine),
+            name = "%s_%s_%s" % (part, case, engine),
             engine = engine,
-            platform = "//godot/platforms:web_wasm32",
+            platform = _CASES[case]["platform"],
             runfiles = True,
             tags = ["manual"],
             target = target,
@@ -29,50 +72,48 @@ host_editor(
         for part, target in [
             (
                 "app",
-                _PARITY + "app",
+                _PARITY + _CASES[case]["app"],
             ),
             (
                 "runtime",
                 _PARITY + "runtime",
             ),
-            ("editor", ":editor"),
         ]
     ]
-    for engine in [
-        "stable",
-        "beta",
-    ]
+    for case in _CASES
+    for engine in _ENGINES
 ]
 
 # Build-output test: the application's files are those of Godot's own web export of the
 # same project with the same template and export options, under the same names, and its
-# page is Godot's line for line.
+# page is Godot's line for line; the service worker differs only in its cache version.
 [
     py_test(
-        name = "web_export_matches_godots_%s_test" % engine,
+        name = "web_export_matches_godots_%s_%s_test" % (case, engine),
         size = "medium",
         srcs = ["parity_test.py"],
         args = [
             "--app",
-            "$(rootpaths :app_%s)" % engine,
+            "$(rootpaths :app_%s_%s)" % (case, engine),
             "--runtime",
-            "$(rootpaths :runtime_%s)" % engine,
+            "$(rootpaths :runtime_%s_%s)" % (case, engine),
             "--editor",
             "$(rootpath :editor_%s)" % engine,
             "--project",
             "$(rootpaths %ssources)" % _PARITY,
+            "--threads" if "threads" in case else "--no-threads",
         ],
         data = [
-            ":app_" + engine,
+            ":app_%s_%s" % (case, engine),
             ":editor_" + engine,
-            ":runtime_" + engine,
+            ":runtime_%s_%s" % (case, engine),
             _PARITY + "sources",
         ],
+        # Not args, which Bazel splits at spaces.
+        env = {"PARITY_EXPORT_OPTIONS": json.encode(_CASES[case]["options"])},
         main = "parity_test.py",
         tags = ["godot_process"],
     )
-    for engine in [
-        "stable",
-        "beta",
-    ]
+    for case in _CASES
+    for engine in _ENGINES
 ]

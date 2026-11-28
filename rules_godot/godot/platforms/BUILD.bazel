@@ -107,6 +107,30 @@ godot_export_platform(
     operating_system = "web",
 )
 
+# The browser with threads, which needs cross-origin isolation from its host.
+godot_export_platform(
+    name = "web_wasm32_threads",
+    cpus = ["@platforms//cpu:wasm32"],
+    operating_system = "web",
+    threads = True,
+)
+
+# Whether a web export platform runs threads; godot_export_platform sets it.
+constraint_setting(
+    name = "thread_support",
+    default_constraint_value = ":nothreads",
+)
+
+constraint_value(
+    name = "threads",
+    constraint_setting = ":thread_support",
+)
+
+constraint_value(
+    name = "nothreads",
+    constraint_setting = ":thread_support",
+)
+
 # Public operating system predicates are reusable for libraries, engines and compatibility.
 
 config_setting(
@@ -128,6 +152,22 @@ config_setting(
 config_setting(
     name = "is_web",
     constraint_values = ["@platforms//os:emscripten"],
+)
+
+config_setting(
+    name = "is_web_threads",
+    constraint_values = [
+        "@platforms//os:emscripten",
+        ":threads",
+    ],
+)
+
+config_setting(
+    name = "is_web_nothreads",
+    constraint_values = [
+        "@platforms//os:emscripten",
+        ":nothreads",
+    ],
 )
 
 config_setting(

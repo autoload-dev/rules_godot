@@ -173,16 +173,35 @@ func _imported(path: String) -> Image:
 # that is saved already is copied instead; saved maps each rendering to its file.
 func _render(preset: EditorExportPreset, entry: Dictionary, source: String, image: Image, saved: Dictionary) -> bool:
 	var output: String = entry["output"]
-	var key: String = JSON.stringify([source, entry.get("size", 0), entry.get("interpolation"), entry.get("opaque", false), output.get_extension()])
+	var key: String = JSON.stringify([source, entry.get("size", 0), entry.get("interpolation"), entry.get("opaque", false), entry.get("shared_resizes"), output.get_extension()])
 	if saved.has(key):
 		var _made: Error = DirAccess.make_dir_recursive_absolute(output.get_base_dir())
 		var copied_from: String = saved[key]
 		return DirAccess.copy_absolute(copied_from, output) == OK
 	var copy: Image = image.duplicate()
+	if source.begins_with("editor_icon:"):
+		_resize_as_shared(preset, entry, copy)
 	if not _save(preset, entry, copy):
 		return false
 	saved[key] = output
 	return true
+
+
+# Resize an icon of the editor's theme as the exports before it resized the one image they
+# share: entry["shared_resizes"] lists [size, option] steps, each taken where its option,
+# such as the one that names an icon of that size instead, is empty; a step whose option
+# starts with "!" is taken where that option is set.
+func _resize_as_shared(preset: EditorExportPreset, entry: Dictionary, image: Image) -> void:
+	var steps: Array = entry.get("shared_resizes", [])
+	for step: Array in steps:
+		var option: String = step[1]
+		var value: Variant = preset.get(option.trim_prefix("!"))
+		var is_set: bool = value if value is bool else not str(value).strip_edges().is_empty()
+		if option.begins_with("!"):
+			is_set = not is_set
+		if not is_set:
+			var size: int = step[0]
+			image.resize(size, size, Image.INTERPOLATE_BILINEAR)
 
 
 func _save(preset: EditorExportPreset, entry: Dictionary, image: Image) -> bool:

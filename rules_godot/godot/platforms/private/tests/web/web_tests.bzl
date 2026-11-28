@@ -2,8 +2,9 @@
 What a godot_app for the web export platform provides, and what it rejects.
 
 It provides GodotWebAppInfo, whose page is index.html and which needs no cross-origin
-isolation without threads; its variant is Bazel's, so a pack that authors thread support,
-extension support or an enabled progressive web app fails, and so does a pack with C#.
+isolation without threads, the host's headers with threads, or the service worker of a
+progressive web app that ensures them; its variant is Bazel's, so a pack that authors thread support or
+extension support fails, and so does a pack with C#.
 """
 
 load("@rules_testing//lib:analysis_test.bzl", "analysis_test")
@@ -74,9 +75,30 @@ def _test_variant_and_pwa_are_bazels(name):
     _failure_test(name, [
         ({"variant/thread_support": "true"}, main, "variant/thread_support"),
         ({"variant/extensions_support": "true"}, main, "variant/extensions_support"),
-        ({"progressive_web_app/enabled": "true"}, main, "progressive_web_app/enabled"),
         ({"custom_template/release": '"web.zip"'}, main, "custom_template/release"),
     ])
+
+_THREADS = {"//command_line_option:platforms": str(Label("//godot/platforms:web_wasm32_threads"))}
+
+def _test_threads_need_isolation(name):
+    for case, target, expected in [
+        ("headers", "app", "headers"),
+        ("service_worker", "pwa_app", "service_worker"),
+    ]:
+        analysis_test(
+            name = name + "_" + case,
+            target = _PARITY + target,
+            impl = _isolation_is,
+            attrs = {"expected": attr.string()},
+            attr_values = _SMALL | {"expected": expected},
+            config_settings = _THREADS,
+        )
+    native.test_suite(name = name, tests = [name + "_headers", name + "_service_worker"])
+
+# Threads need cross-origin isolation: from the host's headers, or from the progressive web
+# app's service worker where it ensures them.
+def _isolation_is(env, target):
+    env.expect.that_str(target[GodotWebAppInfo].cross_origin_isolation).equals(env.ctx.attr.expected)
 
 def _test_csharp_project_fails(name):
     godot_resources(
@@ -106,6 +128,7 @@ def web_test_suite(name):
             _test_web_app_provides_its_page,
             _test_variant_and_pwa_are_bazels,
             _test_csharp_project_fails,
+            _test_threads_need_isolation,
             _test_pwa_disabled_is_accepted,
         ],
     )

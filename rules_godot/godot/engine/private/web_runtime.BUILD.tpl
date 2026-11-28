@@ -8,5 +8,6 @@ prebuilt_runtime(
     emscripten_version = {EMSCRIPTEN_VERSION},
     platform = "web",
     variant = {VARIANT},
+    web_templates = {TEMPLATES},
     version = {VERSION},
 )

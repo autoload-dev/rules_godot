@@ -421,18 +421,16 @@ def _web_owned_options():
     """
     Return the web export's owned options.
 
-    Its variant follows the export platform and the pack's extensions, and the progressive
-    web app is not supported yet.
+    Its variant follows the export platform and the pack's extensions.
     """
     return [
         _owned(
             "variant/thread_support",
             "export_platform",
-            derive = "constant",
+            derive = "web_threads",
             placement = "preset",
             when = "always",
             authored = "reject",
-            value = False,
         ),
         _owned(
             "variant/extensions_support",
@@ -441,16 +439,6 @@ def _web_owned_options():
             placement = "preset",
             when = "always",
             authored = "reject",
-            value = False,
-        ),
-        # A pack may say false, Godot's default; true has no supported workflow yet.
-        _owned(
-            "progressive_web_app/enabled",
-            "web-pwa",
-            derive = "constant",
-            placement = "pack",
-            when = "always",
-            authored = "match",
             value = False,
         ),
     ]
@@ -618,7 +606,6 @@ _GODOT_4_7["option_owners"] = {
     "output-layout": "the godot_app target name and Bazel's output layout",
     "android-compression": "rules_android's packaging of JNI libraries",
     "web-extensions": "the extensions of the application's packs: an application with web extensions takes the template that loads them",
-    "web-pwa": "not supported yet: progressive web apps",
 }
 
 # ==== Export hooks ============================================================

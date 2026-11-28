@@ -182,6 +182,18 @@ OPERATING_SYSTEM_CONSTRAINTS = {
 
 CPU_CONSTRAINTS = {cpu: row.constraint for cpu, row in CPU_TABLE.items()}
 
+# The web's threads: a property of the export platform, since they change the ABI of
+# extensions, the engine's feature tags and what the host must serve.
+THREADS_CONSTRAINT = Label("//godot/platforms:threads")
+
+_NOTHREADS_CONSTRAINT = Label("//godot/platforms:nothreads")
+
+def _thread_constraints(operating_system, threads):
+    """A web export platform's threads constraint, explicit so a parent cannot set it."""
+    if operating_system != "web":
+        return []
+    return [THREADS_CONSTRAINT if threads else _NOTHREADS_CONSTRAINT]
+
 ENVIRONMENT_CONSTRAINTS = {
     environment: Label("@apple_support//constraints:" + environment)
     for environment in ["device", "simulator"]
@@ -384,6 +396,7 @@ def export_platform_declarations(
         constraint_values = [],
         exec_properties = {},
         visibility = None,
+        threads = False,
         _fail = fail):
     """
     Return the platforms of one export platform, as native.platform keyword arguments.
@@ -392,13 +405,14 @@ def export_platform_declarations(
 
     Args:
         name: Public export platform target name.
-        operating_system: Operating system: linux, macos, android or ios.
+        operating_system: Operating system: linux, macos, android, ios or web.
         cpus: @platforms//cpu labels from the CPU table.
         package_relative_label: native.package_relative_label of the declaring package.
         environment: iOS environment, or None for the default.
         parents: At most one parent platform label.
         constraint_values: Additional constraints of every platform.
         exec_properties: Execution properties of every platform.
+        threads: Whether a web export platform runs threads.
         visibility: Visibility of the public export platform.
         _fail: Called with the declaration error; the function then returns no platforms.
 
@@ -412,6 +426,9 @@ def export_platform_declarations(
     if error:
         _fail(error)
         return []
+    if threads and operating_system != "web":
+        _fail("threads applies to web export platforms only")
+        return []
     if _names_owned_constraint(constraint_values, package_relative_label):
         _fail("Operating system, CPU and iOS environment constraints are owned by godot_export_platform")
         return []
@@ -420,7 +437,7 @@ def export_platform_declarations(
         package_relative_label,
     )
     flags = _platform_flags(platform)
-    base_constraints = _base_constraints(platform, constraint_values)
+    base_constraints = _base_constraints(platform, constraint_values) + _thread_constraints(operating_system, threads)
     declarations = [
         {
             "name": package_relative_label(platform_slice).name,
@@ -509,7 +526,7 @@ PLATFORM_ATTRS = {
 } | {
     "_environment_" + name: attr.label(default = label)
     for name, label in ENVIRONMENT_CONSTRAINTS.items()
-}
+} | {"_threads": attr.label(default = THREADS_CONSTRAINT)}
 
 def target_platform(ctx):
     """
@@ -520,8 +537,8 @@ def target_platform(ctx):
 
     Returns:
         A struct of operating_system and cpu (CPU table key), each empty where the
-        platform has none rules_godot knows, and environment (device or simulator on
-        iOS, otherwise empty).
+        platform has none rules_godot knows, environment (device or simulator on
+        iOS, otherwise empty) and threads (whether a web platform runs threads).
     """
 
     def first(kind, names):
@@ -537,6 +554,9 @@ def target_platform(ctx):
         operating_system = operating_system,
         cpu = first("cpu", CPU_CONSTRAINTS),
         environment = first("environment", ENVIRONMENT_CONSTRAINTS) if operating_system == "ios" else "",
+        threads = operating_system == "web" and ctx.target_platform_has_constraint(
+            ctx.attr._threads[platform_common.ConstraintValueInfo],
+        ),
     )
 
 def context_attrs():
@@ -626,6 +646,7 @@ def configured_context(ctx):
     if operating_system and not cpu:
         fail("Unsupported CPU for operating system %s at %s" % (operating_system, ctx.label))
     return struct(
+        threads = platform.threads,
         operating_system = operating_system,
         preset_platform = {"linux": "Linux", "macos": "macOS", "android": "Android", "ios": "iOS", "web": "Web"}.get(operating_system, ""),
         cpus = cpus,

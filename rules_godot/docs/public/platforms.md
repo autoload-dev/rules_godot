@@ -629,8 +629,7 @@ rules_godot calls the operating system `web`; Bazel's constraint is
 for `select()`, and a consumer's own export platform declares `operating_system = "web"` with
 `cpus = ["@platforms//cpu:wasm32"]`. A web pack has the feature tags `web`, `wasm32`,
 `nothreads` and `web_noextensions`. The registered engines supply the web runtime from
-Godot's prebuilt web templates, without threads and without extension support, in the
-release and debug variants; the templates are fetched only when an application builds for
+Godot's prebuilt web templates, with and without threads, in the release and debug variants; the templates are fetched only when an application builds for
 the web. The runtime names its Godot version and the Emscripten version its templates were
 built with, and the engine version check covers it.
 
@@ -660,16 +659,85 @@ The page follows the pack's `export_options`, under the names of Godot's export 
 | --- | --- |
 | `html/*` | The page, as Godot writes it. `html/custom_html_shell` names a file of the pack. |
 | `vram_texture_compression/*` | Which texture families the pack keeps. |
-| `variant/thread_support` | The export platform; an authored value fails. |
+| `variant/thread_support` | The export platform's `threads`; an authored value fails. |
 | `variant/extensions_support` | Derived from the pack's extensions; an authored value fails. |
 | `custom_template/*` | The registered engine; an authored value fails. |
-| `progressive_web_app/enabled` | Not supported yet: `true` fails. |
+| `progressive_web_app/*` | The [progressive web app](#progressive-web-apps), as Godot writes it. |
 
 The web runs the Compatibility renderer: a project that selects Forward+ or Mobile for the
 web gets a note when its application is packaged. Godot exports no C# project for the web,
 and its application fails analysis. An application whose add-ons bring extensions follows
 [missing extension libraries](gdextension.md#missing-extension-libraries): it fails and
 names them, or builds without them.
+
+### Threads
+
+Threads are a property of the export platform: they change the engine's feature tags, the
+ABI of extensions and what the host must serve. `web_wasm32_threads` runs Godot's threaded
+templates, and a consumer's own export platform sets `threads = True`; without threads stays
+the default, as in Godot since 4.3.
+
+```sh
+bazel build //path/to:app --platforms=@autoload_rules_godot//godot/platforms:web_wasm32_threads
+```
+
+```starlark
+godot_export_platform(
+    name = "web_threads",
+    operating_system = "web",
+    cpus = ["@platforms//cpu:wasm32"],
+    threads = True,
+)
+
+select({
+    "@autoload_rules_godot//godot/platforms:is_web_threads": [...],
+    "@autoload_rules_godot//godot/platforms:is_web_nothreads": [...],
+    "//conditions:default": [...],
+})
+```
+
+A pack for a threaded platform has the feature tag `threads` instead of `nothreads`. A
+threaded application starts only in a cross-origin isolated page: the host sends
+`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`, or
+the progressive web app's service worker supplies them where the host sets none, such as
+GitHub Pages. Without either, the page shows Godot's notice naming cross-origin isolation.
+`GodotWebAppInfo.cross_origin_isolation` tells a deploy rule which: `none` without threads,
+`headers` with threads, `service_worker` with threads and a progressive web app that ensures
+the headers. Packaging a threaded application prints what its host needs. `bazel run` sends
+the headers itself. Safari does not support `Cross-Origin-Embedder-Policy: credentialless`,
+which some hosts, such as itch.io, rely on; serve `require-corp` or use the progressive web app
+there.
+
+### Progressive web apps
+
+A web application is a progressive web app as Godot exports one, on either web export
+platform, from the pack's export options:
+
+```starlark
+godot_pack(
+    name = "pack",
+    project = ":game",
+    deps = [":main"],
+    export_options = {
+        "progressive_web_app/enabled": "true",
+        "progressive_web_app/ensure_cross_origin_isolation_headers": "true",
+        "progressive_web_app/offline_page": '"res://web/offline.html"',
+        "progressive_web_app/display": "1",
+        "progressive_web_app/orientation": "0",
+        "progressive_web_app/icon_144x144": '"res://web/icon_144.png"',
+        "progressive_web_app/icon_180x180": '"res://web/icon_180.png"',
+        "progressive_web_app/icon_512x512": '"res://web/icon_512.png"',
+        "progressive_web_app/background_color": "Color(0.14, 0.14, 0.14, 1)",
+    },
+)
+```
+
+The directory gains Godot's files: `index.manifest.json`, `index.service.worker.js`,
+`index.offline.html` and the manifest's icons `index.144x144.png`, `index.180x180.png` and
+`index.512x512.png`. The offline page and the icons that the options name are files of the
+pack. One deliberate difference from Godot: Godot versions the service worker's cache with
+the export's time, so two exports of one project differ; rules_godot takes a digest of the
+files the worker caches, which changes exactly when they do.
 
 ### Run a web application
 
@@ -692,6 +760,8 @@ bazel run //path/to:app --platforms=... -- --headless -- -- --level=3
 | `--headless` | A Chromium browser of this host without a window, with software rendering, and Godot's `--headless` |
 | `--port=<number>` | The server's port; 8060 by default, the next free one when it is taken |
 | `--fresh`, `--detach`, `--env` | Fail: a browser gives the application no environment, and its storage is the browser's |
+
+For a threaded application the server sends the isolation headers.
 
 The launcher uses the browsers of this host and downloads none. `--headless` needs a
 Chromium browser: Google Chrome, Chromium, Microsoft Edge or `chrome-headless-shell`. Without
