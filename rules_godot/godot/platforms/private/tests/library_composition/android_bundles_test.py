@@ -46,9 +46,9 @@ class AndroidBundlesTest(unittest.TestCase):
     def test_every_abi_gets_the_engine_and_the_extension(self) -> None:
         for library in (
             "lib/arm64-v8a/libgodot_android.so",
-            "lib/arm64-v8a/libhello_native.so",
+            "lib/arm64-v8a/libhello.so",
             "lib/x86_64/libgodot_android.so",
-            "lib/x86_64/libhello_native.so",
+            "lib/x86_64/libhello.so",
         ):
             self.assertIn(library, self.names)
 

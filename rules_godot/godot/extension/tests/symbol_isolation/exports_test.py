@@ -88,7 +88,7 @@ class ExportsTest(unittest.TestCase):
         for probe in PROBES:
             with self.subTest(probe=probe):
                 name = probe.lower()
-                library = root / f"{name}.shared" / f"lib{name}_native.so"
+                library = root / f"{name}.library.shared" / f"lib{name}.so"
                 self.assertEqual({f"{probe}_probe_init"}, exports(library))
 
 

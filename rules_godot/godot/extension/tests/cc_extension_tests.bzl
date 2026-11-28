@@ -48,6 +48,10 @@ def _extension(name, **kwargs):
         **kwargs
     )
 
+def _shared(name):
+    """The shared library target of the test's extension."""
+    return "%s_extension.library.shared/lib%s_extension.so" % (name, name)
+
 def _links(target):
     """The input paths of a target's one CppLink action."""
     links = [action for action in target[TestingAspectInfo].actions if action.mnemonic == "CppLink"]
@@ -71,7 +75,7 @@ def _test_tool_branch_of_deps_builds_the_tool_library(name):
     ]:
         analysis_test(
             name = name + "_" + configuration,
-            target = "%s_extension.shared/lib%s_extension_native.so" % (name, name),
+            target = _shared(name),
             impl = _tool_branch_of_deps_builds_the_tool_library,
             attrs = {"linked": attr.string(), "unlinked": attr.string()},
             attr_values = _SMALL | {"linked": linked, "unlinked": unlinked},
@@ -108,7 +112,7 @@ def _test_shared_library_finds_its_dependencies_beside_it(name):
     _extension(name + "_extension")
     analysis_test(
         name = name,
-        target = "%s_extension.shared/lib%s_extension_native.so" % (name, name),
+        target = _shared(name),
         impl = _shared_library_finds_its_dependencies_beside_it,
         attr_values = _SMALL,
     )
@@ -124,13 +128,13 @@ def _test_shared_library_exports_only_the_entry_symbol(name):
     _extension(name + "_extension")
     analysis_test(
         name = name + "_host",
-        target = "%s_extension.shared/lib%s_extension_native.so" % (name, name),
+        target = _shared(name),
         impl = _shared_library_exports_only_the_entry_symbol,
         attr_values = _SMALL,
     )
     analysis_test(
         name = name + "_android",
-        target = "%s_extension.shared/lib%s_extension_native.so" % (name, name),
+        target = _shared(name),
         impl = _shared_library_exports_only_the_entry_symbol,
         attr_values = _SMALL | _ANDROID_SDK,
         config_settings = _ANDROID,
@@ -146,7 +150,7 @@ def _shared_library_exports_only_the_entry_symbol(env, target):
     env.expect.that_collection(scripts).has_size(1)
     env.expect.that_collection(links.argv).contains("-Wl,--version-script," + scripts[0])
 
-def _test_hdrs_reach_the_archive_the_shared_library_links(name):
+def _test_hdrs_reach_the_code_the_shared_library_links(name):
     fixture_file(
         name = name + "_header",
         out = name + "_fixture.h",
@@ -156,23 +160,28 @@ def _test_hdrs_reach_the_archive_the_shared_library_links(name):
     analysis_test(
         name = name,
         targets = {
-            "archive": name + "_extension.native",
-            "shared": "%s_extension.shared/lib%s_extension_native.so" % (name, name),
+            "code": name + "_extension.native",
+            "archive": name + "_extension.library.archive",
+            "shared": _shared(name),
         },
-        impl = _hdrs_reach_the_archive_the_shared_library_links,
+        impl = _hdrs_reach_the_code_the_shared_library_links,
         attrs = {"header": attr.string()},
         attr_values = _SMALL | {"header": name + "_fixture.h"},
     )
 
 # Compile actions discover their headers at execution, so analysis sees the headers in the
-# archive's hdrs; the shared library compiles nothing and links the archive.
-def _hdrs_reach_the_archive_the_shared_library_links(env, targets):
+# code's hdrs. The shared library compiles nothing; it links the library's archive, which
+# holds the code.
+def _hdrs_reach_the_code_the_shared_library_links(env, targets):
     files = [
         file.basename
-        for dependency in targets.archive[TestingAspectInfo].attrs.hdrs
+        for dependency in targets.code[TestingAspectInfo].attrs.hdrs
         for file in dependency[DefaultInfo].files.to_list()
     ]
     env.expect.that_collection(files).contains(env.ctx.attr.header)
+    env.expect.that_collection(
+        [str(dependency.label) for dependency in targets.archive[TestingAspectInfo].attrs.deps],
+    ).contains_exactly([str(targets.code.label)])
     env.expect.that_collection(
         [str(dependency.label) for dependency in targets.shared[TestingAspectInfo].attrs.deps],
     ).contains_exactly([str(targets.archive.label)])
@@ -272,18 +281,18 @@ def _ios_framework_carries_the_frameworks_it_links(env, target):
     ).contains_exactly(["FixtureAnalytics", "FixtureCore", target.label.name])
 
 def _test_ios_framework_binary_has_its_install_name(name):
-    _ios_analysis_test(name, _ios_framework_binary_has_its_install_name, ".ios_framework_files")
+    _ios_analysis_test(name, _ios_framework_binary_has_its_install_name, ".library.ios_framework_files")
 
 def _ios_framework_binary_has_its_install_name(env, target):
     # The toolchain names the linked library after its file, so the framework's copy
     # gets the framework's install name afterwards.
-    framework = target.label.name.removesuffix(".ios_framework_files")
+    framework = target.label.name.removesuffix(".library.ios_framework_files")
     actions = [action for action in target[TestingAspectInfo].actions if action.mnemonic == "GodotFrameworkBinary"]
     env.expect.that_int(len(actions), expr = "number of install name actions").equals(1)
     env.expect.that_collection(actions[0].argv).contains("@rpath/%s.framework/%s" % (framework, framework))
 
 def _test_ios_framework_binary_combines_every_cpu(name):
-    _ios_analysis_test(name, _ios_framework_binary_combines_every_cpu, ".ios_framework_files", config_settings = _IOS_SIMULATOR_BOTH_CPUS)
+    _ios_analysis_test(name, _ios_framework_binary_combines_every_cpu, ".library.ios_framework_files", config_settings = _IOS_SIMULATOR_BOTH_CPUS)
 
 def _ios_framework_binary_combines_every_cpu(env, target):
     # rules_apple embeds one binary per framework, whichever CPU's framework it takes.
@@ -352,7 +361,7 @@ def cc_extension_test_suite(name):
             _test_tool_view_is_the_tool_configuration,
             _test_shared_library_finds_its_dependencies_beside_it,
             _test_shared_library_exports_only_the_entry_symbol,
-            _test_hdrs_reach_the_archive_the_shared_library_links,
+            _test_hdrs_reach_the_code_the_shared_library_links,
             _test_descriptor_attributes_reach_both_extensions,
             _test_minimum_os_versions_reach_extension_info,
             _test_ios_extension_is_a_framework,

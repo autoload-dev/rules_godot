@@ -25,7 +25,7 @@ godot_cc_extension(
     deps = ["@godot_cpp"],
 )
 
-# The library name libhello_native.so follows the target name.
+# The library name libhello.so follows the target name.
 godot_cc_extension(
     name = "hello",
     srcs = ["hello.cc"],

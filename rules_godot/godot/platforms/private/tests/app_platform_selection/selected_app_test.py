@@ -121,8 +121,8 @@ def inspect_android(
     )
     names = list(files)
     abis = {"arm64-v8a" if cpu == "arm64" else "x86_64" for cpu in cpus}
-    extension = [name for name in names if name.endswith("/libhello_native.so")]
-    assert abi_directories(names, "libhello_native.so") == abis, extension
+    extension = [name for name in names if name.endswith("/libhello.so")]
+    assert abi_directories(names, "libhello.so") == abis, extension
     engine_libraries = [name for name in names if name.endswith("/libgodot_android.so")]
     assert abi_directories(names, "libgodot_android.so") == abis, engine_libraries
     for name in engine_libraries:
@@ -190,7 +190,7 @@ def inspect_desktop(
     )
     descriptor = pck_member(packed, "native/hello.gdextension").decode()
     assert operating_system + "." in descriptor, descriptor
-    assert any(name.endswith("/libhello_native.so") for name in names), names
+    assert any(name.endswith("/libhello.so") for name in names), names
     assert not any(name.endswith((".dex", ".aar")) for name in names), names
 
 

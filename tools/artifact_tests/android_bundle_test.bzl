@@ -81,7 +81,7 @@ android_bundle_test = rule(
         bundle = ":app",
         bundletool = "@bundletool//file",
         application_id = "org.example.game",
-        apk_libraries = ["lib/arm64-v8a/libgame_native.so"],
+        apk_libraries = ["lib/arm64-v8a/libgame.so"],
         pck_files = ["main/main.gd"],
     )
     ```

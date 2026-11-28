@@ -8,7 +8,7 @@ package(
     default_visibility = ["//godot/platforms/private/tests:__subpackages__"],
 )
 
-# The native extension the pack ships; the library name libhello_native.so follows the
+# The native extension the pack ships; the library name libhello.so follows the
 # target name.
 godot_cc_extension(
     name = "hello",

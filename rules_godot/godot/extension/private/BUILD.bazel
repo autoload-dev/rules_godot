@@ -16,6 +16,16 @@ bzl_library(
     srcs = ["cc_extension.bzl"],
     deps = [
         ":extension",
+        ":extension_library",
+        "//godot/private:macros",
+        "@rules_cc//cc:cc_library",
+    ],
+)
+
+bzl_library(
+    name = "extension_library",
+    srcs = ["extension_library.bzl"],
+    deps = [
         ":ios_framework",
         "//godot/private:macros",
         "@bazel_skylib//rules:write_file",
@@ -50,6 +60,7 @@ bzl_library(
     name = "extension",
     srcs = ["extension.bzl"],
     deps = [
+        ":extension_library",
         ":library",
         "//godot/platforms/private:manifest_graph",
         "//godot/private:addon",

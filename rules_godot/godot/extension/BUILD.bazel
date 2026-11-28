@@ -17,6 +17,7 @@ bzl_library(
     deps = [
         "//godot/extension/private:cc_extension",
         "//godot/extension/private:extension",
+        "//godot/extension/private:extension_library",
     ],
 )
 

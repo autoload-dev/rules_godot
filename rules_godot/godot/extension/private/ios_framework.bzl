@@ -1,5 +1,5 @@
 """
-The files of the iOS framework that godot_cc_extension wraps its dynamic library in.
+The files of the iOS framework that godot_extension_library wraps its dynamic library in.
 
 An iOS application embeds and signs the framework; Godot loads it when it loads the
 extension. Each framework links its own godot-cpp and exports only the entry symbol, so
@@ -7,7 +7,7 @@ extensions from different modules never share or collide on godot-cpp's symbols.
 
 rules_apple's ios_dynamic_framework would relink the binary from deps under its own
 transition, without the extension's export list and configuration; this rule combines
-the libraries godot_cc_extension already linked for each CPU of the application into the
+the libraries godot_extension_library already linked for each CPU of the application into the
 framework's binary. Its Info.plist has fixed string keys, so it is written here rather
 than by a plist tool action.
 """
@@ -25,10 +25,10 @@ def _sanitize(text, allowed, replacement):
 
 def framework_name(name):
     """
-    Return the framework and binary name of extension name: letters, digits and _ only.
+    Return the framework and binary name of library name: letters, digits and _ only.
 
     Args:
-        name: The extension's target name.
+        name: The extension library's name.
 
     Returns:
         The name, with every other character replaced by _.
@@ -37,11 +37,11 @@ def framework_name(name):
 
 def _default_bundle_id(package, name):
     """
-    Return the CFBundleIdentifier of extension name in package.
+    Return the CFBundleIdentifier of extension library name in package.
 
     Args:
-        package: The extension's package, such as addons/sentry.
-        name: The extension's target name.
+        package: The library's package, such as addons/sentry.
+        name: The library's name.
 
     Returns:
         A reverse-DNS identifier unique per extension label, such as
@@ -154,16 +154,17 @@ _ios_framework_files = rule(
     exec_compatible_with = ["@platforms//os:osx"],
 )
 
-def ios_framework(name, shared, bundle_id, generated):
+def ios_framework(name, shared, library_name, bundle_id, generated):
     """
-    Declare the iOS framework of extension name around its shared library.
+    Declare the iOS framework of extension library name around its shared library.
 
     Args:
-        name: The extension's target name.
-        shared: Name of the extension's shared library target in this package.
+        name: The extension library's target name.
+        shared: Name of the shared library target in this package.
+        library_name: The library's name, which names the framework.
         bundle_id: CFBundleIdentifier of the framework; empty derives one from the
-            extension's label.
-        generated: The attributes of the private targets godot_cc_extension generates.
+            package and library_name.
+        generated: The attributes of the private targets godot_extension_library declares.
 
     Returns:
         The name of the framework import that iOS applications embed.
@@ -172,8 +173,8 @@ def ios_framework(name, shared, bundle_id, generated):
     _ios_framework_files(
         name = files,
         binary = ":" + shared,
-        framework_name = framework_name(name),
-        bundle_id = bundle_id or _default_bundle_id(native.package_name(), name),
+        framework_name = framework_name(library_name),
+        bundle_id = bundle_id or _default_bundle_id(native.package_name(), library_name),
         **generated
     )
     framework = name + ".ios_framework"

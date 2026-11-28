@@ -38,7 +38,7 @@ class CcExtensionAbiTest(unittest.TestCase):
         )
 
     def test_entry_symbol_initializes_at_the_scene_level(self) -> None:
-        library = ctypes.CDLL(str(runfile("hello.shared/libhello_native.so")))
+        library = ctypes.CDLL(str(runfile("hello.library.shared/libhello.so")))
         entry = library.rules_godot_library_init
         entry.argtypes = [
             ctypes.c_void_p,

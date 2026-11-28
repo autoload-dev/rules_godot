@@ -350,8 +350,8 @@ android_bundle_test(
         'android:targetSdkVersion="36"',
     ],
     symbol_libraries = [
-        "arm64-v8a/libhello_native.so",
-        "x86_64/libhello_native.so",
+        "arm64-v8a/libhello.so",
+        "x86_64/libhello.so",
     ],
     tags = ["godot_process"],
     target_compatible_with = _ANDROID_SDK,

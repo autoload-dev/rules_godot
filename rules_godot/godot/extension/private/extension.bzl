@@ -17,6 +17,7 @@ load("//godot/private:providers.bzl", "GodotExtensionInfo")
 load("//godot/private:symbols.bzl", "keep_debug_info")
 load("//godot/private:versions.bzl", "dotted_version", "require_supported_godot_minimum")
 load("//godot/private/config:transitions.bzl", "tool_transition")
+load(":extension_library.bzl", "GodotExtensionLibraryInfo")
 load(":library.bzl", "LIBRARY_ATTRS", "configured_library", "library_context")
 
 visibility(["//godot/extension"])
@@ -47,7 +48,31 @@ def _require_minimum_os_versions(minimum_os_versions):
         if not dotted_version(version):
             fail("minimum_os_versions[%s] must be a dotted numeric version; got %r" % (operating_system, version))
 
-def _write_descriptor(ctx, descriptor, configured):
+def _resolved_library(ctx, target):
+    """
+    Return the configured library's target, entry symbol and linked frameworks.
+
+    The frameworks are the AppleFrameworkImportInfo of those a godot_extension_library's
+    code links.
+
+    A godot_extension_library carries its entry symbol. A library from any other rule, or
+    a prebuilt file, carries none, so the extension names it.
+    """
+    if GodotExtensionLibraryInfo in target:
+        info = target[GodotExtensionLibraryInfo]
+        if ctx.attr.entry_symbol and ctx.attr.entry_symbol != info.entry_symbol:
+            fail("%s: the entry symbol %s differs from %s, the entry symbol of %s" % (
+                ctx.label,
+                ctx.attr.entry_symbol,
+                info.entry_symbol,
+                target.label,
+            ))
+        return info.library, info.entry_symbol, info.frameworks
+    if not ctx.attr.entry_symbol:
+        fail("%s: %s carries no entry symbol; name it with entry_symbol" % (ctx.label, target.label))
+    return target, ctx.attr.entry_symbol, []
+
+def _write_descriptor(ctx, descriptor, configured, entry_symbol):
     """Write the descriptor fragment with the entries of configured, a configured_library or None."""
     library_lines = []
     dependency_lines = []
@@ -64,7 +89,7 @@ def _write_descriptor(ctx, descriptor, configured):
         template = ctx.file._descriptor_template,
         output = descriptor,
         substitutions = {
-            "{ENTRY_SYMBOL}": json.encode(ctx.attr.entry_symbol),
+            "{ENTRY_SYMBOL}": json.encode(entry_symbol),
             "{COMPATIBILITY_MINIMUM}": json.encode(ctx.attr.compatibility_minimum),
             "{RELOADABLE}": "true" if ctx.attr.reloadable else "false",
             "{LIBRARIES}": "\n".join(library_lines),
@@ -75,7 +100,7 @@ def _write_descriptor(ctx, descriptor, configured):
         },
     )
 
-def _library_providers(ctx, library):
+def _library_providers(ctx, target, library, linked_frameworks):
     """Return the providers that expose the library's C++ graph and frameworks; none without a library."""
     if not library:
         return []
@@ -92,7 +117,7 @@ def _library_providers(ctx, library):
     # library links, which the application embeds once however many extensions link them.
     if library.link_kind == "framework":
         sources = (
-            ctx.attr.library +
+            [target] +
             getattr(ctx.attr, "deps", []) +
             getattr(ctx.attr, "implementation_deps", [])
         )
@@ -100,7 +125,7 @@ def _library_providers(ctx, library):
             target[AppleFrameworkImportInfo]
             for target in sources
             if AppleFrameworkImportInfo in target
-        ]))
+        ] + linked_frameworks))
     return providers
 
 def _extension_impl(ctx):
@@ -113,15 +138,19 @@ def _extension_impl(ctx):
     prefix = directory + separator
     descriptor = ctx.actions.declare_file(ctx.label.name + ".gdextension")
     configured = None
+    target = None
+    entry_symbol = ctx.attr.entry_symbol
+    linked_frameworks = []
     resource_paths = {}
 
     # A label attribute with a Starlark transition arrives as a list, empty for None.
     if ctx.attr.library:
-        configured = configured_library(ctx, ctx.attr.library[0], prefix, library_context(ctx))
+        target, entry_symbol, linked_frameworks = _resolved_library(ctx, ctx.attr.library[0])
+        configured = configured_library(ctx, target, prefix, library_context(ctx))
         resource_paths = {resource: descriptor} | configured.resource_paths
     elif ctx.files.data:
         fail("%s: data needs a library in this configuration" % ctx.label)
-    _write_descriptor(ctx, descriptor, configured)
+    _write_descriptor(ctx, descriptor, configured, entry_symbol)
     library = configured.library if configured else None
     files = depset([descriptor] + resource_paths.values())
 
@@ -138,7 +167,7 @@ def _extension_impl(ctx):
         host_editor_resource_paths = host_tool_view[GodotExtensionInfo].runtime_resource_paths if host_tool_view else {},
         runtime_descriptor = descriptor,
         descriptor_path = resource,
-        entry_symbol = ctx.attr.entry_symbol,
+        entry_symbol = entry_symbol,
         platform_libraries = getattr(ctx.attr, "deps", []),
         platform_contributions = struct(infoplists = depset(getattr(ctx.files, "infoplists", []))),
     )
@@ -146,7 +175,7 @@ def _extension_impl(ctx):
     if tool_view:
         # Used by itself, the extension is an add-on of only that extension.
         providers.append(extension_addon(ctx.label, extension))
-    return providers + _library_providers(ctx, library)
+    return providers + _library_providers(ctx, target, library, linked_frameworks)
 
 _OWN_ATTRS = {
     "library": attr.label(
@@ -189,8 +218,12 @@ _OWN_ATTRS = {
         """,
     ),
     "entry_symbol": attr.string(
-        doc = "Exported Godot initialization function, identical for every extension library.",
-        mandatory = True,
+        doc = """
+        Exported Godot initialization function, identical for every extension library.
+        Needed only when the library comes from another rule or is a prebuilt file; a
+        godot_extension_library passes its own on, and a value set beside one must equal
+        it.
+        """,
     ),
     "compatibility_minimum": attr.string(
         doc = """
@@ -337,8 +370,10 @@ godot_extension = macro(
     feature tags from the configuration, the link kind from the library's providers and
     its runtime dependencies from the library and data. Each configuration writes a
     descriptor fragment with its one library entry; packs merge the fragments of their
-    platform slices. The extension takes the library as another rule linked it, in any
-    language, and links nothing itself; godot_cc_extension is the C++ shorthand. Editor
+    platform slices. The extension links nothing itself: it takes a
+    godot_extension_library, or a library as another rule linked it, in any language, or
+    a prebuilt file; godot_cc_extension is the C++ shorthand that declares the code, its
+    library and the extension. Editor
     actions and the host editor load the library of the tool configuration, where
     @autoload_rules_godot//godot:tool and :editor match; a select() with a branch for each
     execution platform's operating system needs no tool branch. Platform libraries that

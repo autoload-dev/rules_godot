@@ -8,6 +8,7 @@ load("//godot/platforms:defs.bzl", "godot_export_platform")
 load(":cc_extension_tests.bzl", "cc_extension_test_suite")
 load(":configured_library_tests.bzl", "configured_library_test_suite")
 load(":descriptor_tests.bzl", "descriptor_test_suite")
+load(":extension_library_tests.bzl", "extension_library_test_suite")
 load(":extension_platform_libraries_tests.bzl", "extension_platform_libraries_test_suite")
 load(":extension_tests.bzl", "extension_test_suite")
 load(":godot_cpp_bindings_tests.bzl", "godot_cpp_bindings_test_suite")
@@ -91,6 +92,8 @@ descriptor_test_suite(name = "descriptor_test_suite")
 godot_cpp_bindings_test_suite(name = "godot_cpp_bindings_test_suite")
 
 extension_test_suite(name = "extension_test_suite")
+
+extension_library_test_suite(name = "extension_library_test_suite")
 
 cc_extension_test_suite(name = "cc_extension_test_suite")
 

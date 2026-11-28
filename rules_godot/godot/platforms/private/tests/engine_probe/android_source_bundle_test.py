@@ -20,7 +20,7 @@ from tools.platforms.native_symbols import elf_build_id, elf_sections
 
 APPLICATION_ID = "org.example.rulesgodot.source"
 ACTIVITY = "com.godot.game.GodotApp"
-LIBRARIES = ["arm64-v8a/libgodot_android.so", "arm64-v8a/libhello_native.so"]
+LIBRARIES = ["arm64-v8a/libgodot_android.so", "arm64-v8a/libhello.so"]
 # The repacked shell library's dex and the source-built engine's unstripped symbols both
 # pass the runtime bridge; rules_android fails the build on a duplicate provider or class.
 SHELL_CLASS = "org.godotengine.godot.Godot"

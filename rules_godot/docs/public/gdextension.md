@@ -54,6 +54,89 @@ their other static dependencies. On iOS this holds for the default
 the executable's. Other functions of the library are not visible to code
 that looks them up by name.
 
+## The parts of an extension
+
+`godot_cc_extension` is a macro over three targets, one for each part of a GDExtension. An
+extension that supports only some platforms, mixes a vendor's prebuilt library on one
+platform with its own sources on another, or links code written in another language
+declares them itself:
+
+| Godot concept | What it is | Target |
+| --- | --- | --- |
+| Native code | Code compiled against the GDExtension API, in C++ through godot-cpp | `cc_library`, or any rule that provides `CcInfo` |
+| Extension library | What Godot loads on a platform: a shared library, an iOS framework or archive | `godot_extension_library` |
+| Extension | The descriptor and what goes with the library: files beside it, platform libraries, Info.plist fragments, the editor's library | `godot_extension` |
+
+```starlark
+load("@autoload_rules_godot//godot/extension:defs.bzl", "godot_extension", "godot_extension_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "paths",
+    srcs = ["register_types.cc"] + select({
+        "@platforms//os:android": ["paths_android.cc"],
+        "@platforms//os:ios": ["paths_ios.mm"],
+        "@platforms//os:linux": ["paths_linux.cc"],
+        "@platforms//os:macos": ["paths_macos.mm"],
+    }),
+    deps = ["@godot_cpp//:godot_cpp"],
+)
+
+godot_extension_library(
+    name = "paths_library",
+    deps = [":paths"],
+    entry_symbol = "platform_paths_init",
+)
+
+godot_extension(
+    name = "platform_paths",
+    library = select({
+        "@platforms//os:android": ":paths_library",
+        "@platforms//os:ios": ":paths_library",
+        "@platforms//os:linux": ":paths_library",
+        "@platforms//os:macos": ":paths_library",
+        "//conditions:default": None,
+    }),
+)
+```
+
+`godot_extension_library` links what its `deps` provide into the one file the target
+platform loads. It exports only the entry symbol and finds its shared dependencies beside
+it. The link keeps the entry symbol's object and what it references; code that nothing
+references, such as a static registration, needs `alwayslink = True` on its `cc_library`,
+as `godot_cc_extension` sets for its own. The library passes the entry symbol on, so the
+extension does not repeat it; an extension whose `entry_symbol` differs from its library's
+fails analysis.
+
+| Operating system | What `godot_extension_library` produces |
+| --- | --- |
+| Linux, Android | a shared library, `lib<library_name>.so` |
+| macOS | a dynamic library, `lib<library_name>.so` |
+| iOS | a dynamic framework, `<library_name>.framework`, or with `ios_linkage = "static"` the archive the application links |
+
+`library_name` is the target's name by default; `godot_cc_extension` names the library
+after the extension, so `game_extension` delivers `libgame_extension.so`. A prebuilt file
+carries no entry symbol, so an extension of a prebuilt file names it:
+
+```starlark
+godot_extension(
+    name = "crash_reporter",
+    entry_symbol = "crash_reporter_init",
+    library = select({
+        "@platforms//os:android": "lib/arm64-v8a/libcrash_reporter.so",
+        "@platforms//os:linux": ":crash_reporter_library",
+        "//conditions:default": None,
+    }),
+)
+```
+
+A library linked by another rule, such as `cc_binary(linkshared = True)`, stays accepted
+beside `godot_extension_library`, as the [libraries per
+configuration](#libraries-per-configuration) list them; the extension then names its entry
+symbol too. On iOS, `godot_cc_extension` also hands its code to the extension, so that
+applications bundle the Apple resources of its dependencies, such as a Swift package's
+resource bundle; an extension declared from the primitives does not.
+
 ## C++ bindings
 
 Add the optional upstream bindings to `MODULE.bazel`:
@@ -184,7 +267,7 @@ library needs at run time are its runtime dependencies: the shared libraries in 
 `cc_binary` or `cc_shared_library`, and the other frameworks of an Apple import. The
 extension places them beside the library and lists them in the descriptor's
 `[dependencies]`, so a library that finds its dependencies through `$ORIGIN` or
-`@loader_path` loads them. `godot_cc_extension` links its shared library with such a run
+`@loader_path` loads them. `godot_extension_library` links its shared library with such a run
 path. Two runtime files of the same name fail analysis.
 
 `data` holds the files of a vendor's `[dependencies]` that the library's providers do not

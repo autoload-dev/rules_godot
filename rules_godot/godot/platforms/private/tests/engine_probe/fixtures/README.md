@@ -5,7 +5,7 @@ Each section names a fixture and what it reproduces for the tests of this packag
 ## probe_project_with_native_extensions
 
 One project with a godot-cpp extension (`BazelNode`, entry `example_library_init`) and a C
-ABI extension (`libhello_native.so`), packaged as Android applications and an iOS
+ABI extension (`libhello.so`), packaged as Android applications and an iOS
 application and unsigned device link for whichever engine the test's configuration
 selects: the prebuilt 4.8 beta, the source-built beta with the `bazel_probe` module and
 engine patch of `godot/engine/private/tests/fixtures/source_build`, or the source-built 4.7

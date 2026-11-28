@@ -36,7 +36,7 @@ class ValidateArtifactsTest(unittest.TestCase):
         self.ndk.mkdir()
         (self.ndk / "source.properties").write_text("Pkg.Revision = 29.0\n")
         self.apk = self.root / "app.apk"
-        self.write_apk("lib/arm64-v8a/libcounter_native.so")
+        self.write_apk("lib/arm64-v8a/libcounter.so")
         self.bundle = self.root / "static_app.app"
         self.app = self.root / "unpacked"
         self.app.mkdir()
@@ -139,7 +139,7 @@ class ValidateArtifactsTest(unittest.TestCase):
                         "sdkVersion:'24'",
                     ],
                     "native_libraries": [
-                        "lib/arm64-v8a/libcounter_native.so",
+                        "lib/arm64-v8a/libcounter.so",
                         "lib/arm64-v8a/libgodot_android.so",
                     ],
                     "gdextension_entry_exported": "native_counter_init",
@@ -167,7 +167,7 @@ class ValidateArtifactsTest(unittest.TestCase):
         self.write_apk("lib/arm64-v8a/libother.so")
         with self.assertRaisesRegex(ValueError, "no compiled extension library"):
             self.validate()
-        self.write_apk("lib/arm64-v8a/libcounter_native.so")
+        self.write_apk("lib/arm64-v8a/libcounter.so")
         self.outputs["llvm-readelf"] = ""
         with self.assertRaisesRegex(ValueError, "Android extension entry is absent"):
             self.validate()

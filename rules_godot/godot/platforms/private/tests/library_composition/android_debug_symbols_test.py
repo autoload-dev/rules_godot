@@ -30,7 +30,7 @@ class AndroidDebugSymbolsTest(unittest.TestCase):
             self.assertIn('package="org.example.rulesgodot"', manifest)
             with zipfile.ZipFile(universal) as apk:
                 sections = debug_symbol_sections(apk, args.debug_symbols)
-        self.assertIn("arm64-v8a/libhello_native.so", sections)
+        self.assertIn("arm64-v8a/libhello.so", sections)
         for name, names in sections.items():
             with self.subTest(library=name):
                 self.assertIn(".symtab", names)

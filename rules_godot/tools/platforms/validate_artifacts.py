@@ -25,7 +25,7 @@ IOS_APP = "//e2e/rules_godot/smoke/ios:static_app"
 # Its bundle, executable and pack, named after the target.
 IOS_EXECUTABLE = "static_app"
 MACOS_APP = "//e2e/rules_godot/smoke/macos:app"
-ANDROID_LIBRARY = "lib/arm64-v8a/libcounter_native.so"
+ANDROID_LIBRARY = "lib/arm64-v8a/libcounter.so"
 ENTRY_SYMBOL = "native_counter_init"
 
 

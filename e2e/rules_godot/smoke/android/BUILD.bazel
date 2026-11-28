@@ -71,7 +71,7 @@ android_bundle_test(
     size = "medium",
     apk_libraries = [
         "lib/arm64-v8a/libgodot_android.so",
-        "lib/arm64-v8a/libcounter_native.so",
+        "lib/arm64-v8a/libcounter.so",
     ],
     application_id = "org.example.smoke.android",
     bundle = ":bundle",
