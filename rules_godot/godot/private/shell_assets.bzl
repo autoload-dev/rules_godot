@@ -265,12 +265,11 @@ def _web(ctx, assets):
                 "interpolation": _BILINEAR,
                 # Godot resizes the editor theme's icon in place, so each default icon
                 # starts from the one before it: from the touch icon where the page has
-                # one, then from each earlier manifest icon.
-                "shared_resizes": {
-                    "guard": "html/export_icon",
-                    "guarded": [180],
-                    "sizes": _PWA_ICON_SIZES[:index],
-                },
+                # one, then from each earlier manifest icon that has no icon of its own.
+                "shared_resizes": [[180, "!html/export_icon"]] + [
+                    [earlier, "progressive_web_app/icon_%dx%d" % (earlier, earlier)]
+                    for earlier in _PWA_ICON_SIZES[:index]
+                ],
             }
             for index, size in enumerate(_PWA_ICON_SIZES)
         ] + [

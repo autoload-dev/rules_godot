@@ -188,18 +188,20 @@ func _render(preset: EditorExportPreset, entry: Dictionary, source: String, imag
 
 
 # Resize an icon of the editor's theme as the exports before it resized the one image they
-# share: entry["shared_resizes"] names the sizes, those after guard only where it is set.
+# share: entry["shared_resizes"] lists [size, option] steps, each taken where its option,
+# such as the one that names an icon of that size instead, is empty; a step whose option
+# starts with "!" is taken where that option is set.
 func _resize_as_shared(preset: EditorExportPreset, entry: Dictionary, image: Image) -> void:
-	if not entry.has("shared_resizes"):
-		return
-	var shared: Dictionary = entry["shared_resizes"]
-	var sizes: Array = []
-	var guard: String = shared["guard"]
-	if preset.get(guard):
-		sizes.append_array(shared["guarded"])
-	sizes.append_array(shared["sizes"])
-	for size: int in sizes:
-		image.resize(size, size, Image.INTERPOLATE_BILINEAR)
+	var steps: Array = entry.get("shared_resizes", [])
+	for step: Array in steps:
+		var option: String = step[1]
+		var value: Variant = preset.get(option.trim_prefix("!"))
+		var is_set: bool = value if value is bool else not str(value).strip_edges().is_empty()
+		if option.begins_with("!"):
+			is_set = not is_set
+		if not is_set:
+			var size: int = step[0]
+			image.resize(size, size, Image.INTERPOLATE_BILINEAR)
 
 
 func _save(preset: EditorExportPreset, entry: Dictionary, image: Image) -> bool:

@@ -186,6 +186,14 @@ CPU_CONSTRAINTS = {cpu: row.constraint for cpu, row in CPU_TABLE.items()}
 # extensions, the engine's feature tags and what the host must serve.
 THREADS_CONSTRAINT = Label("//godot/platforms:threads")
 
+_NOTHREADS_CONSTRAINT = Label("//godot/platforms:nothreads")
+
+def _thread_constraints(operating_system, threads):
+    """A web export platform's threads constraint, explicit so a parent cannot set it."""
+    if operating_system != "web":
+        return []
+    return [THREADS_CONSTRAINT if threads else _NOTHREADS_CONSTRAINT]
+
 ENVIRONMENT_CONSTRAINTS = {
     environment: Label("@apple_support//constraints:" + environment)
     for environment in ["device", "simulator"]
@@ -429,7 +437,7 @@ def export_platform_declarations(
         package_relative_label,
     )
     flags = _platform_flags(platform)
-    base_constraints = _base_constraints(platform, constraint_values) + ([THREADS_CONSTRAINT] if threads else [])
+    base_constraints = _base_constraints(platform, constraint_values) + _thread_constraints(operating_system, threads)
     declarations = [
         {
             "name": package_relative_label(platform_slice).name,

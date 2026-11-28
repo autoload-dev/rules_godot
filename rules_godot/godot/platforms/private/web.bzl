@@ -50,6 +50,15 @@ _ISOLATION_HEADERS = {
     "Cross-Origin-Opener-Policy": "same-origin",
 }
 
+def _authored_true(pack, option, default):
+    """
+    Whether a boolean export option is true, as the pack authors it or by Godot's default.
+
+    Analysis cannot read the probe's facts, so the default of each option this reads
+    stands here; the packager writes the files from the facts.
+    """
+    return pack.export_options.get(option, default).strip() in ["true", "1"]
+
 def _isolation(pack, threads):
     """
     What the host must do for the application to start: none, headers or service_worker.
@@ -59,8 +68,8 @@ def _isolation(pack, threads):
     """
     if not threads:
         return "none"
-    pwa = pack.export_options.get("progressive_web_app/enabled", "false").strip() == "true"
-    ensures = pack.export_options.get("progressive_web_app/ensure_cross_origin_isolation_headers", "true").strip() == "true"
+    pwa = _authored_true(pack, "progressive_web_app/enabled", "false")
+    ensures = _authored_true(pack, "progressive_web_app/ensure_cross_origin_isolation_headers", "true")
     return "service_worker" if pwa and ensures else "headers"
 
 def _package(ctx, pack, runtime, name):
@@ -71,13 +80,13 @@ def _package(ctx, pack, runtime, name):
         flag: file
         for flag, file in {
             "--shell": _pack_file(ctx, pack, "html/custom_html_shell"),
-            "--offline-page": _pack_file(ctx, pack, "progressive_web_app/offline_page"),
+            # Godot reads the offline page only for a progressive web app.
+            "--offline-page": _pack_file(ctx, pack, "progressive_web_app/offline_page") if _authored_true(pack, "progressive_web_app/enabled", "false") else None,
         }.items()
         if file
     }
     args = ctx.actions.args()
-    template = runtime.web_templates["threads" if _threads(ctx) else "nothreads"]
-    args.add("--runtime", template.dirname)
+    args.add("--runtime", _template(ctx, runtime).dirname)
     args.add("--pack", pack.pack_file)
     args.add("--facts", pack.facts)
 
@@ -99,6 +108,14 @@ def _package(ctx, pack, runtime, name):
         progress_message = "Packaging web application %{label}",
     )
     return site, archive
+
+def _template(ctx, runtime):
+    """The godot.wasm of the runtime's template that the export platform needs."""
+    kind = "threads" if _threads(ctx) else "nothreads"
+    templates = getattr(runtime, "web_templates", None) or {"nothreads": runtime.executable}
+    if kind not in templates:
+        fail("%s: the web runtime %s has no template with %s" % (ctx.label, runtime.origin, kind))
+    return templates[kind]
 
 def _threads(ctx):
     return ctx.target_platform_has_constraint(ctx.attr._threads[platform_common.ConstraintValueInfo])
